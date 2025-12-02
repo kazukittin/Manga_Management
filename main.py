@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
     QCheckBox,
+    QSizePolicy,
 )
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QPixmap, QIcon, QKeyEvent
@@ -162,9 +163,21 @@ class MangaViewerWindow(QWidget):
 
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
+        # ラベルサイズをピッタリに保ち、レイアウトの中央寄せで表示位置が偏らないようにする
+        self.image_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        # ラベルを中央揃えにしたコンテナを作り、スクロール領域にセット
+        # widgetResizable=True のときでも中央に表示されるよう、レイアウトのアラインメントで制御
+        self.image_container = QWidget()
+        container_layout = QVBoxLayout()
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setAlignment(Qt.AlignCenter)
+        container_layout.addWidget(self.image_label, 0, Qt.AlignCenter)
+        self.image_container.setLayout(container_layout)
+
         # スクロール領域自体も中央寄せにして、余白ができても真ん中に表示されるようにする
         self.scroll_area.setAlignment(Qt.AlignCenter)
-        self.scroll_area.setWidget(self.image_label)
+        self.scroll_area.setWidget(self.image_container)
 
         # --- 操作用のボタンと状態表示 ---
         self.prev_button = QPushButton("◀ 前のページ")
@@ -247,6 +260,7 @@ class MangaViewerWindow(QWidget):
         if pixmap is None:
             return
 
+        target_pixmap: Optional[QPixmap] = None
         if self.fit_checkbox.isChecked():
             # スクロールエリアの内側サイズに収まるよう縮小（拡大はしない）
             viewport_size = self.scroll_area.viewport().size()
@@ -256,11 +270,13 @@ class MangaViewerWindow(QWidget):
                     Qt.KeepAspectRatio,
                     Qt.SmoothTransformation,
                 )
-                self.image_label.setPixmap(scaled)
-            else:
-                self.image_label.setPixmap(pixmap)
-        else:
-            self.image_label.setPixmap(pixmap)
+                target_pixmap = scaled
+        if target_pixmap is None:
+            target_pixmap = pixmap
+
+        self.image_label.setPixmap(target_pixmap)
+        # ラベル自体のサイズも画像に合わせて更新（中央寄せが効くようにする）
+        self.image_label.adjustSize()
 
     # ------------------------------
     # ページ送り（ボタン・ショートカット）
