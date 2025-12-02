@@ -1,0 +1,39 @@
+<Window x:Class="MangaManagement.Views.ViewerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Viewer" Height="900" Width="1200"
+        WindowStartupLocation="CenterOwner"
+        Background="#111"
+        KeyDown="Window_KeyDown">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#1E1E2E" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Title}" Foreground="White" FontSize="18" FontWeight="Bold" />
+                <TextBlock Grid.Column="1" Margin="8,0" Text="{Binding CurrentPageLabel}" Foreground="White" VerticalAlignment="Center" />
+                <Button Grid.Column="2" Padding="12,6" Click="BackButton_Click">本棚に戻る</Button>
+            </Grid>
+        </Border>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="0" Width="60" Content="←" FontSize="20" Click="PrevButton_Click" />
+            <Border Grid.Column="1" Background="#111" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Image Source="{Binding CurrentImage}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Viewbox>
+            </Border>
+            <Button Grid.Column="2" Width="60" Content="→" FontSize="20" Click="NextButton_Click" />
+        </Grid>
+    </DockPanel>
+</Window>
