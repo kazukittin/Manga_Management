@@ -6,6 +6,7 @@ Python 初心者でも流れを追いやすいようにコメントを多めに�
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 import zipfile
@@ -34,6 +35,9 @@ from PySide6.QtGui import QPixmap, QIcon, QKeyEvent
 
 # 画像として扱う拡張子
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+
+# 本棚データの保存先（ユーザーホーム直下にシンプルな JSON を置く）
+CONFIG_FILE = Path.home() / ".manga_bookshelf.json"
 
 
 # ==============================
@@ -158,6 +162,8 @@ class MangaViewerWindow(QWidget):
 
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
+        # スクロール領域自体も中央寄せにして、余白ができても真ん中に表示されるようにする
+        self.scroll_area.setAlignment(Qt.AlignCenter)
         self.scroll_area.setWidget(self.image_label)
 
         # --- 操作用のボタンと状態表示 ---
@@ -186,6 +192,9 @@ class MangaViewerWindow(QWidget):
         layout.addWidget(self.scroll_area)
         layout.addLayout(controls)
         self.setLayout(layout)
+
+        # キー操作（矢印キー）を受け取れるようにフォーカスを許可
+        self.setFocusPolicy(Qt.StrongFocus)
 
         # 最初のページを読み込む
         self._load_current_page()
@@ -319,6 +328,9 @@ class MainWindow(QMainWindow):
         # --- メニューバーを作成 ---
         self._create_menu_bar()
 
+        # --- 保存された本棚を自動復元（前回の状態を即座に表示） ---
+        self._restore_bookshelf()
+
     def _create_bookshelf_view(self):
         # 本棚っぽく本を並べるための QListWidget
         self.books_view = QListWidget()
@@ -397,15 +409,27 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # 見つかった漫画ファイルで本棚ビューを更新
-        self.update_bookshelf(manga_files)
+        # 既存の本棚に新しい本をマージ（複数フォルダ対応）
+        merged: Dict[str, Path] = {str(p): p for p in self.book_paths}
+        for p in manga_files:
+            merged[str(p)] = p
 
-    def update_bookshelf(self, manga_files: List[Path]):
-        # いったん本棚をクリア
+        combined_list = sorted(merged.values(), key=lambda p: p.name.lower())
+
+        # 見つかった漫画ファイルで本棚ビューを更新し、保存も行う
+        self.update_bookshelf(combined_list, save=True)
+
+    def update_bookshelf(self, manga_files: List[Path], save: bool = True):
+        """本棚を与えられたファイル一覧で更新（必要なら保存もする）"""
+
+        # 存在しないファイルを除外しつつ内部状態を更新
+        valid_files = [p for p in manga_files if p.is_file()]
+        self.book_paths = valid_files
+
+        # いったん本棚をクリアしてから再描画
         self.books_view.clear()
-        self.book_paths = manga_files
 
-        for path in manga_files:
+        for path in valid_files:
             title = path.stem  # 拡張子抜きのファイル名
             item = QListWidgetItem(title)
 
@@ -425,6 +449,10 @@ class MainWindow(QMainWindow):
             # どのアイテムがどのパスか分かるようにデータを入れておく
             item.setData(Qt.UserRole, str(path))
             self.books_view.addItem(item)
+
+        # 任意指定があれば、本棚リストを JSON に保存
+        if save:
+            self._save_bookshelf_to_disk()
 
     # ==============================
     # 本を開く処理（ダブルクリック時）
@@ -490,6 +518,58 @@ class MainWindow(QMainWindow):
         )
 
     # ==============================
+    # 本棚データの保存・復元
+    # ==============================
+
+    def _save_bookshelf_to_disk(self) -> None:
+        """現在の本棚リストを JSON に保存（失敗してもアプリは止めない）"""
+
+        data = {"books": [str(p) for p in self.book_paths]}
+        try:
+            CONFIG_FILE.write_text(
+                json.dumps(data, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception:
+            # 保存に失敗してもユーザー操作は続けられるよう握りつぶす
+            pass
+
+    def _load_bookshelf_from_disk(self) -> List[Path]:
+        """保存された本棚リストを読み込んで Path のリストで返す"""
+
+        if not CONFIG_FILE.exists():
+            return []
+
+        try:
+            raw = CONFIG_FILE.read_text(encoding="utf-8")
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                return []
+            books = data.get("books", [])
+            if not isinstance(books, list):
+                return []
+            return [Path(x) for x in books if isinstance(x, str)]
+        except Exception:
+            return []
+
+    def _restore_bookshelf(self) -> None:
+        """起動時に前回の本棚を読み込み、存在するものだけ並べ直す"""
+
+        saved_paths = self._load_bookshelf_from_disk()
+        if not saved_paths:
+            return
+
+        # 失われたファイルはスキップ（クラッシュ回避）
+        valid_paths = [p for p in saved_paths if p.is_file()]
+
+        if not valid_paths:
+            return
+
+        # 表示順を揃えてから再描画（保存されたリストは信頼するが、順序も整える）
+        valid_paths.sort(key=lambda p: p.name.lower())
+        self.update_bookshelf(valid_paths, save=False)
+
+    # ==============================
     # レイアウト調整（5列×4行を目安に）
     # ==============================
 
@@ -535,6 +615,12 @@ class MainWindow(QMainWindow):
         self.books_view.setSpacing(spacing)
         self.books_view.setGridSize(QSize(grid_width, grid_height))
         self.books_view.setIconSize(QSize(icon_width, icon_height))
+
+    def closeEvent(self, event):
+        """終了時に本棚リストを保存してから閉じる"""
+
+        self._save_bookshelf_to_disk()
+        super().closeEvent(event)
 
 
 def main():
