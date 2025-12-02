@@ -595,9 +595,21 @@ class MainWindow(QMainWindow):
         if available_width <= 0:
             available_width = self.books_view.width()
 
-        # 最低幅で何冊置けるかを計算し、最大 5 列に揃える
-        min_slot = base_grid.width() + spacing
-        columns = max(1, min(5, available_width // min_slot))
+        # 最大化時は画面幅（タイトルバー等を除く）も参照して、5 列狙いの計算を安定させる
+        if self.isMaximized() and self.screen():
+            available_width = max(available_width, self.screen().availableGeometry().width())
+
+        min_slot = base_grid.width() + spacing  # 最低限 1 枠に必要な幅
+
+        # 通常時は入るだけ詰め、最大化時は 5 列を優先（無理なら入る数に落とす）
+        if self.isMaximized():
+            # 5 列置ける幅があれば積極的に 5 列に寄せる
+            if available_width >= min_slot * 5:
+                columns = 5
+            else:
+                columns = max(1, available_width // min_slot)
+        else:
+            columns = max(1, min(5, available_width // min_slot))
 
         # 決まった列数で幅を割り、目安サイズを上限にして密度を保つ
         total_spacing = spacing * (columns + 1)
