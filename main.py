@@ -1,6 +1,13 @@
+"""メインのエントリポイント（単一ファイル構成）
+
+PySide6 で作る簡易マンガ本棚アプリ。コード全体を一つのファイルにまとめ、
+Python 初心者でも流れを追いやすいようにコメントを多めに入れています。
+"""
+
 import sys
 from pathlib import Path
 import zipfile
+from typing import List, Optional
 
 import py7zr
 
@@ -22,6 +29,66 @@ from PySide6.QtGui import QPixmap, QIcon
 
 # 画像として扱う拡張子
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+
+
+def get_first_image_bytes(path: Path) -> Optional[bytes]:
+    """zip / cbz / 7z から最初の画像を bytes で取り出す共通関数"""
+
+    suffix = path.suffix.lower()
+    if suffix in {".zip", ".cbz"}:
+        return _get_first_image_from_zip(path)
+    if suffix == ".7z":
+        return _get_first_image_from_7z(path)
+    return None
+
+
+def _get_first_image_from_zip(path: Path) -> Optional[bytes]:
+    """zip/cbz から最初の画像ファイルを取り出す"""
+
+    with zipfile.ZipFile(path, "r") as zf:
+        # 画像ファイルだけに絞る
+        image_names = [
+            name
+            for name in zf.namelist()
+            if Path(name).suffix.lower() in IMAGE_EXTS
+        ]
+
+        if not image_names:
+            return None
+
+        # 名前順にソートして一番先頭を使う
+        image_names.sort()
+        first_name = image_names[0]
+
+        with zf.open(first_name, "r") as img_file:
+            return img_file.read()
+
+
+def _get_first_image_from_7z(path: Path) -> Optional[bytes]:
+    """7z から最初の画像ファイルを取り出す（py7zr使用）"""
+
+    with py7zr.SevenZipFile(path, "r") as archive:
+        all_names = archive.getnames()
+
+        image_names = [
+            name
+            for name in all_names
+            if Path(name).suffix.lower() in IMAGE_EXTS
+        ]
+
+        if not image_names:
+            return None
+
+        image_names.sort()
+        first_name = image_names[0]
+
+        # read は {ファイル名: BytesIO} の dict を返す
+        data_dict = archive.read([first_name])
+        file_obj = data_dict.get(first_name)
+        if file_obj is None:
+            return None
+
+        return file_obj.read()
 
 
 class ImageViewerWindow(QWidget):
@@ -63,7 +130,10 @@ class MainWindow(QMainWindow):
         self.resize(900, 600)
 
         # 選んだ漫画ファイルのパス一覧
-        self.book_paths = []
+        self.book_paths: List[Path] = []
+
+        # ビューアウィンドウの参照を保持しておく（ガベージコレクション対策）
+        self.open_viewers: List[ImageViewerWindow] = []
 
         # --- 本棚ビューを作成（中央ウィジェットにする） ---
         self._create_bookshelf_view()
@@ -131,10 +201,14 @@ class MainWindow(QMainWindow):
         # 対象とする拡張子
         target_exts = {".zip", ".cbz", ".7z"}
 
-        manga_files = []
-        for entry in folder_path.iterdir():
-            if entry.is_file() and entry.suffix.lower() in target_exts:
-                manga_files.append(entry)
+        manga_files = [
+            entry
+            for entry in folder_path.iterdir()
+            if entry.is_file() and entry.suffix.lower() in target_exts
+        ]
+
+        # 表示順がバラバラにならないよう、名前順でソート
+        manga_files.sort(key=lambda p: p.name.lower())
 
         if not manga_files:
             QMessageBox.information(
@@ -147,7 +221,7 @@ class MainWindow(QMainWindow):
         # 見つかった漫画ファイルで本棚ビューを更新
         self.update_bookshelf(manga_files)
 
-    def update_bookshelf(self, manga_files):
+    def update_bookshelf(self, manga_files: List[Path]):
         # いったん本棚をクリア
         self.books_view.clear()
         self.book_paths = manga_files
@@ -157,7 +231,7 @@ class MainWindow(QMainWindow):
             item = QListWidgetItem(title)
 
             # 1枚目の画像をサムネイルとして使う
-            image_data = self._get_first_image_bytes(path)
+            image_data = get_first_image_bytes(path)
             if image_data is not None:
                 pixmap = QPixmap()
                 if pixmap.loadFromData(image_data):
@@ -185,7 +259,7 @@ class MainWindow(QMainWindow):
         path = Path(path_str)
 
         try:
-            image_data = self._get_first_image_bytes(path)
+            image_data = get_first_image_bytes(path)
             if image_data is None:
                 QMessageBox.warning(
                     self,
@@ -197,6 +271,10 @@ class MainWindow(QMainWindow):
             # ビューアウィンドウを開く
             viewer = ImageViewerWindow(path.name, image_data, self)
             viewer.show()
+            self.open_viewers.append(viewer)
+
+            # 閉じられたらリストから自動で消す
+            viewer.destroyed.connect(lambda _=None, v=viewer: self._forget_viewer(v))
 
         except Exception as e:
             QMessageBox.critical(
@@ -206,67 +284,14 @@ class MainWindow(QMainWindow):
             )
 
     # ==============================
-    # アーカイブから1枚目の画像を取り出す共通関数
-    # ==============================
-
-    def _get_first_image_bytes(self, path: Path):
-        """zip / cbz / 7z の中から最初の画像ファイルを bytes で返す"""
-        suffix = path.suffix.lower()
-        if suffix in {".zip", ".cbz"}:
-            return self._get_first_image_from_zip(path)
-        elif suffix == ".7z":
-            return self._get_first_image_from_7z(path)
-        else:
-            return None
-
-    def _get_first_image_from_zip(self, path: Path):
-        """zip/cbz から最初の画像ファイルを取り出す"""
-        with zipfile.ZipFile(path, "r") as zf:
-            # 画像ファイルだけに絞る
-            image_names = [
-                name
-                for name in zf.namelist()
-                if Path(name).suffix.lower() in IMAGE_EXTS
-            ]
-
-            if not image_names:
-                return None
-
-            # 名前順にソートして一番先頭を使う
-            image_names.sort()
-            first_name = image_names[0]
-
-            with zf.open(first_name, "r") as img_file:
-                return img_file.read()
-
-    def _get_first_image_from_7z(self, path: Path):
-        """7z から最初の画像ファイルを取り出す（py7zr使用）"""
-        with py7zr.SevenZipFile(path, "r") as archive:
-            all_names = archive.getnames()
-
-            image_names = [
-                name
-                for name in all_names
-                if Path(name).suffix.lower() in IMAGE_EXTS
-            ]
-
-            if not image_names:
-                return None
-
-            image_names.sort()
-            first_name = image_names[0]
-
-            # read は {ファイル名: BytesIO} の dict を返す
-            data_dict = archive.read([first_name])
-            file_obj = data_dict.get(first_name)
-            if file_obj is None:
-                return None
-
-            return file_obj.read()
-
-    # ==============================
     # その他
     # ==============================
+
+    def _forget_viewer(self, viewer: ImageViewerWindow) -> None:
+        """閉じたビューアをリストから除去"""
+
+        if viewer in self.open_viewers:
+            self.open_viewers.remove(viewer)
 
     def show_about_dialog(self):
         QMessageBox.information(
