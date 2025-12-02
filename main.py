@@ -138,6 +138,9 @@ class MainWindow(QMainWindow):
         # --- 本棚ビューを作成（中央ウィジェットにする） ---
         self._create_bookshelf_view()
 
+        # 初期レイアウトを反映（表示前でもおおよそ狙いのサイズ感に）
+        self._adjust_bookshelf_layout()
+
         # --- メニューバーを作成 ---
         self._create_menu_bar()
 
@@ -151,10 +154,11 @@ class MainWindow(QMainWindow):
         self.books_view.setWrapping(True)
         self.books_view.setMovement(QListView.Static)
 
-        # 本のサイズ感（仮）
+        # spacing / iconSize / gridSize はウィンドウ幅に応じて後で調整する
+        # （ここではデフォルトのみ入れておく）
         self.books_view.setIconSize(QSize(96, 128))
         self.books_view.setGridSize(QSize(120, 160))
-        self.books_view.setSpacing(10)
+        self.books_view.setSpacing(12)
 
         # アイテムをダブルクリックしたときの処理をつなぐ
         self.books_view.itemDoubleClicked.connect(self.open_book_first_page)
@@ -299,6 +303,53 @@ class MainWindow(QMainWindow):
             "このアプリについて",
             "Manga Bookshelf（仮）\n\nぽんち専用・ローカル漫画本棚アプリだよ〜♡",
         )
+
+    # ==============================
+    # レイアウト調整（5列×4行を目安に）
+    # ==============================
+
+    def resizeEvent(self, event):
+        """ウィンドウサイズ変更時に本棚のグリッドを再計算"""
+
+        super().resizeEvent(event)
+        self._adjust_bookshelf_layout()
+
+    def _adjust_bookshelf_layout(self):
+        """ウィンドウ幅に応じて gridSize / iconSize / spacing を調整"""
+
+        if not hasattr(self, "books_view"):
+            return
+
+        # 目標値（最大化時に 5 列 × 4 行で 20 冊見える想定）
+        base_icon = QSize(96, 128)  # 目安のサムネサイズ
+        base_grid = QSize(120, 160)  # 1 冊分の枠の目安
+        spacing = 12  # 行間・列間（おおむね 10〜15px）
+
+        # ビューポート幅を基準に、何列入るかを決める
+        available_width = self.books_view.viewport().width()
+        if available_width <= 0:
+            available_width = self.books_view.width()
+
+        # 最低幅で何冊置けるかを計算し、最大 5 列に揃える
+        min_slot = base_grid.width() + spacing
+        columns = max(1, min(5, available_width // min_slot))
+
+        # 決まった列数で幅を割り、目安サイズを上限にして密度を保つ
+        total_spacing = spacing * (columns + 1)
+        available_per_column = max(72, (available_width - total_spacing) // max(1, columns))
+        grid_width = min(base_grid.width(), available_per_column)
+
+        # 高さも 3:4 の比率に合わせ、最低値を確保
+        grid_height = max(96, int(grid_width * (base_grid.height() / base_grid.width())))
+
+        # アイコンは枠より一回り小さくし、アスペクト比を維持（上限は目安サイズ）
+        scale = grid_width / base_grid.width()
+        icon_width = max(64, int(base_icon.width() * scale))
+        icon_height = max(84, int(base_icon.height() * scale))
+
+        self.books_view.setSpacing(spacing)
+        self.books_view.setGridSize(QSize(grid_width, grid_height))
+        self.books_view.setIconSize(QSize(icon_width, icon_height))
 
 
 def main():
