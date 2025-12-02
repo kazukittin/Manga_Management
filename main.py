@@ -162,24 +162,30 @@ class MangaViewerWindow(QWidget):
         self.scroll_area.setWidgetResizable(True)
 
         self.image_label = QLabel()
+        # QLabel 自体も「中身を中央に寄せる」
         self.image_label.setAlignment(Qt.AlignCenter)
-        # ラベルサイズをピッタリに保ち、レイアウトの中央寄せで表示位置が偏らないようにする
-        self.image_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # レイアウト上で中央に置きやすいようにリサイズ自由度を確保
+        self.image_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
-        # ラベルを中央揃えにしたコンテナを作り、スクロール領域にセット
-        # widgetResizable=True のときでも中央に表示されるよう、レイアウトのアラインメントで制御
+        # ラベルを中央に置くためのコンテナとレイアウト
+        # 上下に stretch を入れておくと余白ができたときも真ん中に寄る
         self.image_container = QWidget()
         container_layout = QVBoxLayout()
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setAlignment(Qt.AlignCenter)
+        container_layout.addStretch(1)
         container_layout.addWidget(self.image_label, 0, Qt.AlignCenter)
+        container_layout.addStretch(1)
         self.image_container.setLayout(container_layout)
 
-        # スクロール領域自体も中央寄せにして、余白ができても真ん中に表示されるようにする
+        # スクロール領域全体も中央揃えにして、「左上に寄る」問題を防ぐ
         self.scroll_area.setAlignment(Qt.AlignCenter)
         self.scroll_area.setWidget(self.image_container)
 
         # --- 操作用のボタンと状態表示 ---
+        self.back_button = QPushButton("戻る")
+        self.back_button.clicked.connect(self.close)
+
         self.prev_button = QPushButton("◀ 前のページ")
         self.prev_button.clicked.connect(self.show_prev)
 
@@ -194,6 +200,9 @@ class MangaViewerWindow(QWidget):
         self.fit_checkbox.stateChanged.connect(self._update_displayed_pixmap)
 
         controls = QHBoxLayout()
+        # 追加: 戻るボタンでビューアだけ閉じて本棚に戻る
+        controls.addWidget(self.back_button)
+        controls.addSpacing(8)
         controls.addWidget(self.prev_button)
         controls.addWidget(self.next_button)
         controls.addSpacing(12)
@@ -208,6 +217,9 @@ class MangaViewerWindow(QWidget):
 
         # キー操作（矢印キー）を受け取れるようにフォーカスを許可
         self.setFocusPolicy(Qt.StrongFocus)
+
+        # すぐにキーイベントを受け付けられるよう明示的にフォーカスを当てる
+        self.setFocus()
 
         # 最初のページを読み込む
         self._load_current_page()
@@ -252,6 +264,9 @@ class MangaViewerWindow(QWidget):
         # ボタンの有効 / 無効も更新
         self.prev_button.setEnabled(self.current_index > 0)
         self.next_button.setEnabled(self.current_index < len(self.image_entries) - 1)
+
+        # ボタンを押したあとでも矢印キーを受け付けられるよう、フォーカスを戻す
+        self.setFocus()
 
     def _update_displayed_pixmap(self) -> None:
         """フィットオプションに応じてラベルへ画像をセット"""
@@ -311,6 +326,12 @@ class MangaViewerWindow(QWidget):
 
         super().resizeEvent(event)
         self._update_displayed_pixmap()
+
+    def showEvent(self, event):
+        """表示直後にフォーカスを当てて矢印キーを受け付ける"""
+
+        super().showEvent(event)
+        self.setFocus()
 
 
 # ==============================
@@ -466,6 +487,12 @@ class MainWindow(QMainWindow):
             item.setData(Qt.UserRole, str(path))
             self.books_view.addItem(item)
 
+        # 本棚から消えた本の読みかけ情報は破棄しておく
+        current_keys = {str(p) for p in valid_files}
+        self.last_positions = {
+            k: v for k, v in self.last_positions.items() if k in current_keys
+        }
+
         # 任意指定があれば、本棚リストを JSON に保存
         if save:
             self._save_bookshelf_to_disk()
@@ -525,6 +552,8 @@ class MainWindow(QMainWindow):
         """どの本を何ページ目まで読んだかの簡易メモ"""
 
         self.last_positions[str(path)] = index
+        # 読みかけページも含めて保存しておく（失敗しても無視）
+        self._save_bookshelf_to_disk()
 
     def show_about_dialog(self):
         QMessageBox.information(
@@ -538,9 +567,13 @@ class MainWindow(QMainWindow):
     # ==============================
 
     def _save_bookshelf_to_disk(self) -> None:
-        """現在の本棚リストを JSON に保存（失敗してもアプリは止めない）"""
+        """現在の本棚リストと読みかけページを JSON に保存（失敗は無視）"""
 
-        data = {"books": [str(p) for p in self.book_paths]}
+        data = {
+            "books": [str(p) for p in self.book_paths],
+            # 読みかけ情報も同じファイルに保存しておく
+            "last_positions": self.last_positions,
+        }
         try:
             CONFIG_FILE.write_text(
                 json.dumps(data, ensure_ascii=False, indent=2),
@@ -550,28 +583,36 @@ class MainWindow(QMainWindow):
             # 保存に失敗してもユーザー操作は続けられるよう握りつぶす
             pass
 
-    def _load_bookshelf_from_disk(self) -> List[Path]:
-        """保存された本棚リストを読み込んで Path のリストで返す"""
+    def _load_bookshelf_from_disk(self) -> tuple[List[Path], Dict[str, int]]:
+        """保存された本棚リストと読みかけページを読み込む"""
 
         if not CONFIG_FILE.exists():
-            return []
+            return [], {}
 
         try:
             raw = CONFIG_FILE.read_text(encoding="utf-8")
             data = json.loads(raw)
             if not isinstance(data, dict):
-                return []
-            books = data.get("books", [])
-            if not isinstance(books, list):
-                return []
-            return [Path(x) for x in books if isinstance(x, str)]
+                return [], {}
+
+            books_raw = data.get("books", [])
+            books = [Path(x) for x in books_raw if isinstance(x, str)] if isinstance(books_raw, list) else []
+
+            last_raw = data.get("last_positions", {})
+            last_positions: Dict[str, int] = {}
+            if isinstance(last_raw, dict):
+                for k, v in last_raw.items():
+                    if isinstance(k, str) and isinstance(v, int):
+                        last_positions[k] = v
+
+            return books, last_positions
         except Exception:
-            return []
+            return [], {}
 
     def _restore_bookshelf(self) -> None:
         """起動時に前回の本棚を読み込み、存在するものだけ並べ直す"""
 
-        saved_paths = self._load_bookshelf_from_disk()
+        saved_paths, saved_positions = self._load_bookshelf_from_disk()
         if not saved_paths:
             return
 
@@ -583,6 +624,9 @@ class MainWindow(QMainWindow):
 
         # 表示順を揃えてから再描画（保存されたリストは信頼するが、順序も整える）
         valid_paths.sort(key=lambda p: p.name.lower())
+        self.last_positions = {
+            k: v for k, v in saved_positions.items() if Path(k).is_file()
+        }
         self.update_bookshelf(valid_paths, save=False)
 
     # ==============================
