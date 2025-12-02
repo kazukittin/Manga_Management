@@ -4,10 +4,12 @@ PySide6 で作る簡易マンガ本棚アプリ。コード全体を一つのフ
 Python 初心者でも流れを追いやすいようにコメントを多めに入れています。
 """
 
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 import zipfile
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import py7zr
 
@@ -23,102 +25,272 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QScrollArea,
+    QPushButton,
+    QHBoxLayout,
+    QCheckBox,
 )
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QPixmap, QIcon
+from PySide6.QtCore import Qt, QSize, Signal
+from PySide6.QtGui import QPixmap, QIcon, QKeyEvent
 
 # 画像として扱う拡張子
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
 
 
-def get_first_image_bytes(path: Path) -> Optional[bytes]:
-    """zip / cbz / 7z から最初の画像を bytes で取り出す共通関数"""
+# ==============================
+# アーカイブ操作のヘルパー
+# ==============================
+
+def get_image_entries(path: Path) -> List[str]:
+    """アーカイブ内の画像ファイル名をソートして返す"""
 
     suffix = path.suffix.lower()
     if suffix in {".zip", ".cbz"}:
-        return _get_first_image_from_zip(path)
+        return _get_zip_image_entries(path)
     if suffix == ".7z":
-        return _get_first_image_from_7z(path)
+        return _get_7z_image_entries(path)
+    return []
+
+
+def read_image_bytes_from_archive(path: Path, entry_name: str) -> Optional[bytes]:
+    """指定されたエントリを bytes で取り出す共通関数"""
+
+    suffix = path.suffix.lower()
+    if suffix in {".zip", ".cbz"}:
+        return _read_zip_entry(path, entry_name)
+    if suffix == ".7z":
+        return _read_7z_entry(path, entry_name)
     return None
 
 
-def _get_first_image_from_zip(path: Path) -> Optional[bytes]:
-    """zip/cbz から最初の画像ファイルを取り出す"""
+def get_first_image_bytes(path: Path) -> Optional[bytes]:
+    """最初の画像だけ欲しい場合のショートカット"""
+
+    entries = get_image_entries(path)
+    if not entries:
+        return None
+    return read_image_bytes_from_archive(path, entries[0])
+
+
+def _get_zip_image_entries(path: Path) -> List[str]:
+    """zip/cbz 内の画像ファイル名をソートして返す"""
 
     with zipfile.ZipFile(path, "r") as zf:
-        # 画像ファイルだけに絞る
         image_names = [
             name
             for name in zf.namelist()
             if Path(name).suffix.lower() in IMAGE_EXTS
         ]
 
-        if not image_names:
-            return None
-
-        # 名前順にソートして一番先頭を使う
-        image_names.sort()
-        first_name = image_names[0]
-
-        with zf.open(first_name, "r") as img_file:
-            return img_file.read()
+    image_names.sort()
+    return image_names
 
 
-def _get_first_image_from_7z(path: Path) -> Optional[bytes]:
-    """7z から最初の画像ファイルを取り出す（py7zr使用）"""
+def _get_7z_image_entries(path: Path) -> List[str]:
+    """7z 内の画像ファイル名をソートして返す（py7zr使用）"""
 
     with py7zr.SevenZipFile(path, "r") as archive:
         all_names = archive.getnames()
 
-        image_names = [
-            name
-            for name in all_names
-            if Path(name).suffix.lower() in IMAGE_EXTS
-        ]
+    image_names = [
+        name
+        for name in all_names
+        if Path(name).suffix.lower() in IMAGE_EXTS
+    ]
 
-        if not image_names:
-            return None
-
-        image_names.sort()
-        first_name = image_names[0]
-
-        # read は {ファイル名: BytesIO} の dict を返す
-        data_dict = archive.read([first_name])
-        file_obj = data_dict.get(first_name)
-        if file_obj is None:
-            return None
-
-        return file_obj.read()
+    image_names.sort()
+    return image_names
 
 
-class ImageViewerWindow(QWidget):
-    """選んだ本の1ページ目を表示する簡単ビューア"""
+def _read_zip_entry(path: Path, entry_name: str) -> Optional[bytes]:
+    """zip/cbz から特定のファイルを取り出す"""
 
-    def __init__(self, title: str, image_data: bytes, parent=None):
+    try:
+        with zipfile.ZipFile(path, "r") as zf:
+            with zf.open(entry_name, "r") as img_file:
+                return img_file.read()
+    except Exception:
+        return None
+
+
+def _read_7z_entry(path: Path, entry_name: str) -> Optional[bytes]:
+    """7z から特定のファイルを取り出す（py7zr使用）"""
+
+    try:
+        with py7zr.SevenZipFile(path, "r") as archive:
+            data_dict = archive.read([entry_name])  # {ファイル名: BytesIO}
+            file_obj = data_dict.get(entry_name)
+            if file_obj is None:
+                return None
+            return file_obj.read()
+    except Exception:
+        return None
+
+
+# ==============================
+# マンガビューア（ページ送り対応）
+# ==============================
+
+
+class MangaViewerWindow(QWidget):
+    """マンガのページを前後に送って読めるビューアウィンドウ"""
+
+    # 読んだページ番号を親に知らせるシグナル（0 始まり）
+    page_changed = Signal(int)
+
+    def __init__(
+        self,
+        archive_path: Path,
+        image_entries: List[str],
+        start_index: int = 0,
+        parent=None,
+    ):
         super().__init__(parent)
-        self.setWindowTitle(title)
-        self.resize(800, 600)
+        self.archive_path = archive_path
+        self.image_entries = image_entries
+        self.current_index = max(0, min(start_index, len(image_entries) - 1))
 
-        # スクロールできるようにする（大きい画像対策）
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
+        self.setWindowTitle(f"{archive_path.name} - ページビューア")
+        self.resize(900, 700)
+
+        # スクロール可能にして大きいページも読めるようにする
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
 
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
+        self.scroll_area.setWidget(self.image_label)
 
-        # bytes から QPixmap に読み込み
+        # --- 操作用のボタンと状態表示 ---
+        self.prev_button = QPushButton("◀ 前のページ")
+        self.prev_button.clicked.connect(self.show_prev)
+
+        self.next_button = QPushButton("次のページ ▶")
+        self.next_button.clicked.connect(self.show_next)
+
+        # 現在のページ / 総ページ数を表示するラベル
+        self.page_label = QLabel()
+
+        # ウィンドウに合わせて縮小表示するオプション（オリジナルより大きくはしない）
+        self.fit_checkbox = QCheckBox("ウィンドウに合わせて縮小")
+        self.fit_checkbox.stateChanged.connect(self._update_displayed_pixmap)
+
+        controls = QHBoxLayout()
+        controls.addWidget(self.prev_button)
+        controls.addWidget(self.next_button)
+        controls.addSpacing(12)
+        controls.addWidget(self.fit_checkbox)
+        controls.addStretch(1)
+        controls.addWidget(self.page_label)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.scroll_area)
+        layout.addLayout(controls)
+        self.setLayout(layout)
+
+        # 最初のページを読み込む
+        self._load_current_page()
+
+    # ------------------------------
+    # ページ読み込み関連
+    # ------------------------------
+
+    def _load_current_page(self) -> None:
+        """現在のインデックスのページを読み込んで表示"""
+
+        if not self.image_entries:
+            self.image_label.setText("画像ファイルが見つかりませんでした…😢")
+            return
+
+        entry = self.image_entries[self.current_index]
+        image_data = read_image_bytes_from_archive(self.archive_path, entry)
+
+        if not image_data:
+            self.image_label.setText("このページの読み込みに失敗しました…")
+            return
+
         pixmap = QPixmap()
         if not pixmap.loadFromData(image_data):
-            self.image_label.setText("画像の読み込みに失敗しちゃった…😢")
+            self.image_label.setText("画像データの読み込みに失敗しました…")
+            return
+
+        self._current_pixmap = pixmap
+        self._update_displayed_pixmap()
+
+        # ページ数表示とタイトルを更新
+        self.page_label.setText(
+            f"{self.current_index + 1} / {len(self.image_entries)} ページ"
+        )
+        self.setWindowTitle(
+            f"{self.archive_path.name} - {self.current_index + 1}/{len(self.image_entries)}"
+        )
+
+        # 親（本棚）に現在ページを知らせて記憶してもらう
+        self.page_changed.emit(self.current_index)
+
+        # ボタンの有効 / 無効も更新
+        self.prev_button.setEnabled(self.current_index > 0)
+        self.next_button.setEnabled(self.current_index < len(self.image_entries) - 1)
+
+    def _update_displayed_pixmap(self) -> None:
+        """フィットオプションに応じてラベルへ画像をセット"""
+
+        pixmap = getattr(self, "_current_pixmap", None)
+        if pixmap is None:
+            return
+
+        if self.fit_checkbox.isChecked():
+            # スクロールエリアの内側サイズに収まるよう縮小（拡大はしない）
+            viewport_size = self.scroll_area.viewport().size()
+            if pixmap.width() > viewport_size.width() or pixmap.height() > viewport_size.height():
+                scaled = pixmap.scaled(
+                    viewport_size,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                )
+                self.image_label.setPixmap(scaled)
+            else:
+                self.image_label.setPixmap(pixmap)
         else:
             self.image_label.setPixmap(pixmap)
 
-        scroll_area.setWidget(self.image_label)
+    # ------------------------------
+    # ページ送り（ボタン・ショートカット）
+    # ------------------------------
 
-        layout = QVBoxLayout()
-        layout.addWidget(scroll_area)
+    def show_next(self):
+        if self.current_index < len(self.image_entries) - 1:
+            self.current_index += 1
+            self._load_current_page()
 
-        self.setLayout(layout)
+    def show_prev(self):
+        if self.current_index > 0:
+            self.current_index -= 1
+            self._load_current_page()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """キーボードの左右キーでページ送り"""
+
+        if event.key() == Qt.Key_Right:
+            self.show_next()
+            event.accept()
+            return
+        if event.key() == Qt.Key_Left:
+            self.show_prev()
+            event.accept()
+            return
+
+        super().keyPressEvent(event)
+
+    def resizeEvent(self, event):
+        """ウィンドウサイズが変わったら縮小表示を再計算"""
+
+        super().resizeEvent(event)
+        self._update_displayed_pixmap()
+
+
+# ==============================
+# メインウィンドウ（本棚）
+# ==============================
 
 
 class MainWindow(QMainWindow):
@@ -133,7 +305,10 @@ class MainWindow(QMainWindow):
         self.book_paths: List[Path] = []
 
         # ビューアウィンドウの参照を保持しておく（ガベージコレクション対策）
-        self.open_viewers: List[ImageViewerWindow] = []
+        self.open_viewers: List[MangaViewerWindow] = []
+
+        # 読みかけのページを覚えておく簡易メモ（アプリ終了で消える）
+        self.last_positions: Dict[str, int] = {}
 
         # --- 本棚ビューを作成（中央ウィジェットにする） ---
         self._create_bookshelf_view()
@@ -161,7 +336,7 @@ class MainWindow(QMainWindow):
         self.books_view.setSpacing(12)
 
         # アイテムをダブルクリックしたときの処理をつなぐ
-        self.books_view.itemDoubleClicked.connect(self.open_book_first_page)
+        self.books_view.itemDoubleClicked.connect(self.open_book)
 
         self.setCentralWidget(self.books_view)
 
@@ -255,7 +430,7 @@ class MainWindow(QMainWindow):
     # 本を開く処理（ダブルクリック時）
     # ==============================
 
-    def open_book_first_page(self, item: QListWidgetItem):
+    def open_book(self, item: QListWidgetItem):
         path_str = item.data(Qt.UserRole)
         if not path_str:
             return
@@ -263,8 +438,8 @@ class MainWindow(QMainWindow):
         path = Path(path_str)
 
         try:
-            image_data = get_first_image_bytes(path)
-            if image_data is None:
+            entries = get_image_entries(path)
+            if not entries:
                 QMessageBox.warning(
                     self,
                     "画像が見つからない",
@@ -272,8 +447,13 @@ class MainWindow(QMainWindow):
                 )
                 return
 
+            # 前回読んだページがあればそこから再開
+            start_index = self.last_positions.get(str(path), 0)
+            start_index = min(max(0, start_index), len(entries) - 1)
+
             # ビューアウィンドウを開く
-            viewer = ImageViewerWindow(path.name, image_data, self)
+            viewer = MangaViewerWindow(path, entries, start_index=start_index, parent=self)
+            viewer.page_changed.connect(lambda idx, p=path: self._remember_page(p, idx))
             viewer.show()
             self.open_viewers.append(viewer)
 
@@ -291,11 +471,16 @@ class MainWindow(QMainWindow):
     # その他
     # ==============================
 
-    def _forget_viewer(self, viewer: ImageViewerWindow) -> None:
+    def _forget_viewer(self, viewer: MangaViewerWindow) -> None:
         """閉じたビューアをリストから除去"""
 
         if viewer in self.open_viewers:
             self.open_viewers.remove(viewer)
+
+    def _remember_page(self, path: Path, index: int) -> None:
+        """どの本を何ページ目まで読んだかの簡易メモ"""
+
+        self.last_positions[str(path)] = index
 
     def show_about_dialog(self):
         QMessageBox.information(
