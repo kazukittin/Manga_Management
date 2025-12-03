@@ -10,7 +10,7 @@ interface CoverGridProps {
     onEditMetadata?: (filePath: string) => void;
 }
 
-const ITEMS_PER_ROW = 5;
+const ITEMS_PER_ROW = 10;
 
 const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metadata = {}, onEditMetadata }) => {
     // Group files into rows
