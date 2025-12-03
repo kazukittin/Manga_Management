@@ -43,6 +43,31 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
         };
     }, [archivePath, reset]);
 
+    // Load saved progress when the reader opens
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadProgress = async () => {
+            try {
+                const savedPage = await window.api.loadProgress(archivePath);
+                if (!isMounted || totalPages === 0) return;
+
+                const clampedPage = Math.min(savedPage, totalPages - 1);
+                setCurrentPage(clampedPage);
+            } catch (error) {
+                console.error('Failed to load reading progress:', error);
+            }
+        };
+
+        if (totalPages > 0) {
+            loadProgress();
+        }
+
+        return () => {
+            isMounted = false;
+        };
+    }, [archivePath, totalPages, setCurrentPage]);
+
     // Generate manga:// URLs for current pages
     const displayPages = useMemo(() => {
         return getDisplayPages(currentPage, viewMode, totalPages, readingDirection === 'rtl');
@@ -68,6 +93,19 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
     }, [currentPage, totalPages, archivePath]);
 
     useImagePreloader(preloadUrls);
+
+    // Persist reading progress
+    useEffect(() => {
+        const save = async () => {
+            try {
+                await window.api.saveProgress(archivePath, currentPage);
+            } catch (error) {
+                console.error('Failed to save reading progress:', error);
+            }
+        };
+
+        save();
+    }, [archivePath, currentPage]);
 
     // Navigation handlers
     const handleNext = () => {

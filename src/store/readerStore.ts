@@ -48,8 +48,6 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     },
 
     reset: () => set({
-        viewMode: 'single',
-        readingDirection: 'rtl',
         currentPage: 0,
     }),
 }));

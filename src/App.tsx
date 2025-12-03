@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import CoverGrid from './components/CoverGrid';
 import LibraryControls from './components/LibraryControls';
 import Reader from './components/Reader';
 import { useLibraryStore } from './store/libraryStore';
+import { useReaderStore } from './store/readerStore';
 import { sortFiles } from './utils/naturalSort';
 
 function App() {
@@ -19,7 +20,13 @@ function App() {
     setLoading,
   } = useLibraryStore();
 
+  const { loadPreferences } = useReaderStore();
+
   const [currentReader, setCurrentReader] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadPreferences();
+  }, [loadPreferences]);
 
   const handleOpenFolder = async () => {
     const path = await window.api.selectDirectory();
