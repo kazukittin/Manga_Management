@@ -95,22 +95,57 @@ public partial class MainWindow : Window
     private void RestoreWindowPlacement()
     {
         var settings = _settings.Load();
-        if (settings.WindowTop.HasValue && settings.WindowLeft.HasValue)
+        // 画面外に配置された設定値を読んでも確実にウィンドウが見えるように補正する
+        var defaultWidth = Width;
+        var defaultHeight = Height;
+
+        var targetTop = settings.WindowTop ?? Top;
+        var targetLeft = settings.WindowLeft ?? Left;
+        var targetWidth = settings.WindowWidth ?? defaultWidth;
+        var targetHeight = settings.WindowHeight ?? defaultHeight;
+
+        var virtualLeft = SystemParameters.VirtualScreenLeft;
+        var virtualTop = SystemParameters.VirtualScreenTop;
+        var virtualWidth = SystemParameters.VirtualScreenWidth;
+        var virtualHeight = SystemParameters.VirtualScreenHeight;
+
+        var minWidth = 400d;
+        var minHeight = 300d;
+
+        targetWidth = Math.Max(minWidth, Math.Min(targetWidth, virtualWidth));
+        targetHeight = Math.Max(minHeight, Math.Min(targetHeight, virtualHeight));
+
+        // 画面外に出ている場合は見える範囲に戻す
+        if (targetLeft + targetWidth < virtualLeft + 50)
         {
-            Top = settings.WindowTop.Value;
-            Left = settings.WindowLeft.Value;
+            targetLeft = virtualLeft;
         }
-        if (settings.WindowWidth.HasValue && settings.WindowHeight.HasValue)
+        else if (targetLeft > virtualLeft + virtualWidth - 50)
         {
-            Width = settings.WindowWidth.Value;
-            Height = settings.WindowHeight.Value;
+            targetLeft = virtualLeft + virtualWidth - targetWidth;
         }
+
+        if (targetTop + targetHeight < virtualTop + 50)
+        {
+            targetTop = virtualTop;
+        }
+        else if (targetTop > virtualTop + virtualHeight - 50)
+        {
+            targetTop = virtualTop + virtualHeight - targetHeight;
+        }
+
+        Top = targetTop;
+        Left = targetLeft;
+        Width = targetWidth;
+        Height = targetHeight;
+
+        // 最小化状態で終了していた場合は通常表示に戻す（起動時に見えない問題を避けるため）
         if (settings.WindowState.HasValue)
         {
             WindowState = settings.WindowState.Value switch
             {
                 Services.WindowState.Maximized => System.Windows.WindowState.Maximized,
-                Services.WindowState.Minimized => System.Windows.WindowState.Minimized,
+                Services.WindowState.Minimized => System.Windows.WindowState.Normal,
                 _ => System.Windows.WindowState.Normal
             };
         }
