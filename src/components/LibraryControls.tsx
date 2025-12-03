@@ -4,7 +4,13 @@ import { useLibraryStore, SortOrder } from '../store/libraryStore';
 import { MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
 import './LibraryControls.css';
 
-const LibraryControls: React.FC = () => {
+interface LibraryControlsProps {
+    onOpenFolder: () => void;
+    loading: boolean;
+    hasFolder: boolean;
+}
+
+const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading, hasFolder }) => {
     const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
     const [form, setForm] = useState<MangaSearchCriteria>(searchCriteria);
 
@@ -80,6 +86,14 @@ const LibraryControls: React.FC = () => {
                 </div>
 
                 <div className="mode-box">
+                    <button
+                        type="button"
+                        onClick={onOpenFolder}
+                        disabled={loading}
+                        className="folder-button"
+                    >
+                        {loading ? '読み込み中...' : hasFolder ? 'フォルダーを変更' : 'フォルダーを開く'}
+                    </button>
                     <h2 className="text-sm font-semibold text-gray-200">検索モード</h2>
                     <div className="mode-options">
                         <label className="flex items-center gap-2 text-sm text-gray-200">

@@ -161,8 +161,7 @@ function App() {
       )}
 
       <div className="h-screen flex flex-col bg-gray-900 text-white font-sans">
-        <header className="p-4 bg-gray-800 shadow flex items-center justify-between z-10">
-          <h1 className="text-xl font-bold tracking-tight">デスクトップマンガリーダー</h1>
+        <header className="p-4 bg-gray-800 shadow flex items-center justify-end z-10">
           <button
             onClick={handleOpenFolder}
             disabled={loading}
@@ -172,7 +171,13 @@ function App() {
           </button>
         </header>
 
-        {files.length > 0 && <LibraryControls />}
+        {files.length > 0 && (
+          <LibraryControls
+            onOpenFolder={handleOpenFolder}
+            loading={loading}
+            hasFolder={Boolean(currentPath)}
+          />
+        )}
 
         <main className="flex-1 overflow-hidden relative">
           {loading ? (
