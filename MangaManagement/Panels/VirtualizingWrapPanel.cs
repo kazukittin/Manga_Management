@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using Size = System.Windows.Size;
+using Point = System.Windows.Point;
 
 namespace MangaManagement.Panels;
 
