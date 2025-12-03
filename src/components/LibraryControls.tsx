@@ -35,10 +35,6 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
         updateCriteria((prev) => ({ ...prev, mode }));
     };
 
-    const handleApply = () => {
-        setSearchCriteria({ ...form, tags: [...form.tags] });
-    };
-
     const handleReset = () => {
         const reset = { ...defaultSearchCriteria, tags: [] };
         setForm(reset);
@@ -153,13 +149,6 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                         </div>
 
                         <div className="mode-buttons">
-                            <button
-                                type="button"
-                                onClick={handleApply}
-                                className="action-button primary"
-                            >
-                                検索
-                            </button>
                             <button
                                 type="button"
                                 onClick={handleReset}
