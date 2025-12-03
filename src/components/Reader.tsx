@@ -52,7 +52,7 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
                 const savedPage = await window.api.loadProgress(archivePath);
                 if (!isMounted || totalPages === 0) return;
 
-                const clampedPage = Math.min(savedPage, totalPages - 1);
+                const clampedPage = Math.max(0, Math.min(savedPage, totalPages - 1));
                 setCurrentPage(clampedPage);
             } catch (error) {
                 console.error('Failed to load reading progress:', error);
@@ -96,6 +96,8 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
 
     // Persist reading progress
     useEffect(() => {
+        if (totalPages === 0) return;
+
         const save = async () => {
             try {
                 await window.api.saveProgress(archivePath, currentPage);
@@ -105,7 +107,7 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
         };
 
         save();
-    }, [archivePath, currentPage]);
+    }, [archivePath, currentPage, totalPages]);
 
     // Navigation handlers
     const handleNext = () => {
