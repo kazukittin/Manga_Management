@@ -159,7 +159,7 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
             <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
                 <div className="flex flex-col items-center gap-4">
                     <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-                    <span className="text-lg text-blue-400">Loading...</span>
+                    <span className="text-lg text-blue-400">読み込み中...</span>
                 </div>
             </div>
         );

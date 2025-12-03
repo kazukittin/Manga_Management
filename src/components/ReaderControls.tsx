@@ -30,7 +30,7 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Back to Library
+                    ライブラリに戻る
                 </button>
 
                 <div className="flex items-center gap-4">
@@ -46,7 +46,7 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
-                            Single
+                            単ページ
                         </button>
                         <button
                             onClick={() => onViewModeChange(viewMode === 'double' ? 'single' : 'double')}
@@ -55,7 +55,7 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
-                            Double
+                            見開き
                         </button>
                     </div>
 
@@ -67,7 +67,7 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
-                            LTR
+                            左→右
                         </button>
                         <button
                             onClick={() => onReadingDirectionChange(readingDirection === 'rtl' ? 'ltr' : 'rtl')}
@@ -76,7 +76,7 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                                     : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
-                            RTL
+                            右→左
                         </button>
                     </div>
                 </div>

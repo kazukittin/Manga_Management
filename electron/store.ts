@@ -6,6 +6,13 @@ interface StoreSchema {
         viewMode: 'single' | 'double';
         readingDirection: 'ltr' | 'rtl';
     };
+    mangaRootPath?: string;
+    metadata: Record<string, {
+        title?: string;
+        author?: string;
+        publisher?: string;
+        tags: string[];
+    }>;
 }
 
 const store = new Store<StoreSchema>({
@@ -15,6 +22,8 @@ const store = new Store<StoreSchema>({
             viewMode: 'single',
             readingDirection: 'rtl',
         },
+        mangaRootPath: undefined,
+        metadata: {},
     },
 });
 

@@ -50,8 +50,12 @@ export function getNextPage(
     totalPages: number,
     _rtl: boolean
 ): number {
+    if (totalPages === 0) {
+        return 0;
+    }
+
     if (currentPage >= totalPages - 1) {
-        return currentPage; // Already at last page
+        return 0; // Wrap around to the first page
     }
 
     if (viewMode === 'single') {

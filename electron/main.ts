@@ -1,10 +1,18 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { scanDirectory } from './fileScanner'
 import { registerMangaProtocol } from './imageProtocol'
 import { extractCoversForFiles, getImageCount } from './thumbnailExtractor'
 import store from './store'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs'
+
+type MangaMetadata = {
+  title?: string
+  author?: string
+  publisher?: string
+  tags: string[]
+}
 
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -32,10 +40,14 @@ let win: BrowserWindow | null
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
+
+  // Remove default application menu for a clean window
+  Menu.setApplicationMenu(null)
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -89,6 +101,34 @@ app.whenReady().then(() => {
 
   ipcMain.handle('library:getCovers', async (_event, filePaths: string[]) => {
     return await extractCoversForFiles(filePaths)
+  })
+
+  ipcMain.handle('library:getSavedRoot', async () => {
+    const savedPath = store.get('mangaRootPath')
+    if (savedPath && fs.existsSync(savedPath)) {
+      return savedPath
+    }
+    return null
+  })
+
+  ipcMain.handle('library:setRoot', async (_event, rootPath: string) => {
+    store.set('mangaRootPath', rootPath)
+    return rootPath
+  })
+
+  ipcMain.handle('metadata:load', async () => {
+    return store.get('metadata', {}) as Record<string, MangaMetadata>
+  })
+
+  ipcMain.handle('metadata:update', async (_event, filePath: string, metadata: MangaMetadata) => {
+    const currentMetadata = store.get('metadata', {}) as Record<string, MangaMetadata>
+    currentMetadata[filePath] = {
+      ...metadata,
+      title: metadata.title,
+      tags: metadata.tags ?? [],
+    }
+    store.set('metadata', currentMetadata)
+    return currentMetadata[filePath]
   })
 
   ipcMain.handle('archive:getImageCount', async (_event, archivePath: string) => {

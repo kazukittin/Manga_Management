@@ -1,14 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import TagInput from './TagInput';
 import { useLibraryStore, SortOrder } from '../store/libraryStore';
+import { MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
 
 const LibraryControls: React.FC = () => {
-    const { sortOrder, filterText, setSortOrder, setFilterText } = useLibraryStore();
+    const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
+    const [form, setForm] = useState<MangaSearchCriteria>(searchCriteria);
+
+    useEffect(() => {
+        setForm(searchCriteria);
+    }, [searchCriteria]);
+
+    const handleInputChange = (key: keyof MangaSearchCriteria, value: string) => {
+        setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleModeChange = (mode: MangaSearchCriteria['mode']) => {
+        setForm((prev) => ({ ...prev, mode }));
+    };
+
+    const handleApply = () => {
+        setSearchCriteria({ ...form, tags: [...form.tags] });
+    };
+
+    const handleReset = () => {
+        const reset = { ...defaultSearchCriteria, tags: [] };
+        setForm(reset);
+        setSearchCriteria(reset);
+    };
 
     return (
-        <div className="flex items-center gap-4 p-4 bg-gray-800 border-b border-gray-700">
+        <div className="flex flex-col gap-4 p-4 bg-gray-800 border-b border-gray-700">
             <div className="flex items-center gap-2">
                 <label htmlFor="sort" className="text-sm font-medium text-gray-300">
-                    Sort:
+                    並び替え:
                 </label>
                 <select
                     id="sort"
@@ -16,20 +41,83 @@ const LibraryControls: React.FC = () => {
                     onChange={(e) => setSortOrder(e.target.value as SortOrder)}
                     className="bg-gray-700 text-white px-3 py-1.5 rounded text-sm border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                    <option value="natural">Natural Order</option>
-                    <option value="name">Name (A-Z)</option>
-                    <option value="date">Date Modified</option>
+                    <option value="natural">自然順</option>
+                    <option value="name">名前 (A-Z)</option>
+                    <option value="date">更新日</option>
                 </select>
             </div>
 
-            <div className="flex-1 max-w-md">
-                <input
-                    type="text"
-                    placeholder="Filter by name..."
-                    value={filterText}
-                    onChange={(e) => setFilterText(e.target.value)}
-                    className="w-full bg-gray-700 text-white px-3 py-1.5 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <h2 className="text-sm font-semibold text-gray-200">検索条件</h2>
+                    <input
+                        type="text"
+                        placeholder="タイトルで検索"
+                        value={form.title ?? ''}
+                        onChange={(e) => handleInputChange('title', e.target.value)}
+                        className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                        type="text"
+                        placeholder="作者で検索"
+                        value={form.author ?? ''}
+                        onChange={(e) => handleInputChange('author', e.target.value)}
+                        className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                        type="text"
+                        placeholder="出版社で検索"
+                        value={form.publisher ?? ''}
+                        onChange={(e) => handleInputChange('publisher', e.target.value)}
+                        className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <TagInput label="タグ" placeholder="タグで検索" tags={form.tags} onChange={(tags) => setForm((prev) => ({ ...prev, tags }))} />
+                </div>
+
+                <div className="space-y-3">
+                    <h2 className="text-sm font-semibold text-gray-200">検索モード</h2>
+                    <div className="flex flex-col gap-2 text-sm text-gray-200">
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="search-mode"
+                                value="AND"
+                                checked={form.mode === 'AND'}
+                                onChange={() => handleModeChange('AND')}
+                                className="text-blue-500 focus:ring-blue-500"
+                            />
+                            <span>すべての条件に一致 (AND検索)</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="search-mode"
+                                value="OR"
+                                checked={form.mode === 'OR'}
+                                onChange={() => handleModeChange('OR')}
+                                className="text-blue-500 focus:ring-blue-500"
+                            />
+                            <span>いずれかの条件に一致 (OR検索)</span>
+                        </label>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                        <button
+                            type="button"
+                            onClick={handleApply}
+                            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            検索
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleReset}
+                            className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:bg-gray-700"
+                        >
+                            条件をクリア
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
