@@ -30,7 +30,10 @@ function App() {
   const [currentReader, setCurrentReader] = useState<string | null>(null);
   const [metadataTarget, setMetadataTarget] = useState<string | null>(null);
 
-  const fileNameFromPath = (filePath: string) => filePath.split(/[\\/]/).pop() || filePath;
+  const fileNameFromPath = (filePath: string) => {
+    const name = filePath.split(/[\\/]/).pop() || filePath;
+    return name.replace(/\.[^/.]+$/, "");
+  };
 
   useEffect(() => {
     loadPreferences();
@@ -55,7 +58,8 @@ function App() {
       // Filter metadata to the files that exist in the current library and ensure defaults
       const filteredMetadata: Record<string, MangaMetadata> = {};
       fileList.forEach((filePath) => {
-        const fileName = filePath.split(/[\\/]/).pop() || filePath;
+        const fileNameWithExt = filePath.split(/[\\/]/).pop() || filePath;
+        const fileName = fileNameWithExt.replace(/\.[^/.]+$/, "");
         const entry = storedMetadata[filePath];
         filteredMetadata[filePath] = {
           title: entry?.title ?? fileName,

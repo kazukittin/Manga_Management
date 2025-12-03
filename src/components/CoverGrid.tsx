@@ -23,16 +23,17 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
         const items = rows[index];
 
         return (
-            <div className="flex gap-4 px-4 mb-4">
+            <div className="grid grid-cols-10 gap-4 px-4 mb-4">
                 {items.map((filePath) => {
                     const coverUrl = covers[filePath];
-                    const fileName = filePath.split(/[/\\]/).pop() || filePath;
+                    const fileNameWithExt = filePath.split(/[/\\]/).pop() || filePath;
+                    const fileName = fileNameWithExt.replace(/\.[^/.]+$/, "");
                     const details = metadata[filePath];
 
                     return (
                         <div
                             key={filePath}
-                            className="flex-1 max-w-[180px] cursor-pointer group"
+                            className="max-w-[180px] cursor-pointer group"
                             onClick={() => onItemClick?.(filePath)}
                         >
                             <div className="h-full bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-blue-500 transition-all hover:shadow-lg hover:shadow-blue-500/20">
@@ -49,7 +50,7 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
                                     )}
                                 </div>
                                 <div className="p-2 space-y-1">
-                                    <p className="text-xs text-gray-300 truncate group-hover:text-blue-400 transition-colors" title={fileName}>
+                                    <p className="text-xs text-gray-300 truncate group-hover:text-blue-400 transition-colors" title={fileNameWithExt}>
                                         {fileName}
                                     </p>
                                     {details?.author && (

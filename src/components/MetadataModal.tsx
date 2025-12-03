@@ -16,7 +16,10 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
     const [publisher, setPublisher] = useState<string>(metadata?.publisher ?? '');
     const [tags, setTags] = useState<string[]>(metadata?.tags ?? []);
 
-    const fileName = useMemo(() => filePath.split(/[\\/]/).pop() || filePath, [filePath]);
+    const fileName = useMemo(() => {
+        const name = filePath.split(/[\\/]/).pop() || filePath;
+        return name.replace(/\.[^/.]+$/, "");
+    }, [filePath]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
