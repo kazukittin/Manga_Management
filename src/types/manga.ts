@@ -1,10 +1,8 @@
-export interface MangaMetadata {
-    author?: string;
-    publisher?: string;
-    tags: string[];
-}
-
-export interface MangaItem extends MangaMetadata {
-    path: string;
-    title: string;
-}
+export {
+    MangaMetadata,
+    MangaItem,
+    MangaSearchCriteria,
+    SearchMode,
+    filterMangaByCriteria,
+    defaultSearchCriteria,
+} from '../features/manga/metadata';

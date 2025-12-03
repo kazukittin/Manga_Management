@@ -8,6 +8,7 @@ interface StoreSchema {
     };
     mangaRootPath?: string;
     metadata: Record<string, {
+        title?: string;
         author?: string;
         publisher?: string;
         tags: string[];

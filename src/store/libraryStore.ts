@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { MangaMetadata } from '../types/manga';
+import { MangaMetadata, MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
 
 export type SortOrder = 'name' | 'natural' | 'date';
 
@@ -9,7 +9,7 @@ interface LibraryState {
     currentPath: string;
     metadata: Record<string, MangaMetadata>;
     sortOrder: SortOrder;
-    filterText: string;
+    searchCriteria: MangaSearchCriteria;
     loading: boolean;
 
     setFiles: (files: string[]) => void;
@@ -18,10 +18,12 @@ interface LibraryState {
     setMetadata: (metadata: Record<string, MangaMetadata>) => void;
     updateMetadata: (path: string, metadata: MangaMetadata) => void;
     setSortOrder: (order: SortOrder) => void;
-    setFilterText: (text: string) => void;
+    setSearchCriteria: (criteria: MangaSearchCriteria) => void;
     setLoading: (loading: boolean) => void;
     reset: () => void;
 }
+
+const freshCriteria = () => ({ ...defaultSearchCriteria, tags: [...defaultSearchCriteria.tags] });
 
 export const useLibraryStore = create<LibraryState>((set) => ({
     files: [],
@@ -29,7 +31,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
     currentPath: '',
     metadata: {},
     sortOrder: 'natural',
-    filterText: '',
+    searchCriteria: freshCriteria(),
     loading: false,
 
     setFiles: (files) => set({ files }),
@@ -46,7 +48,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
         },
     })),
     setSortOrder: (sortOrder) => set({ sortOrder }),
-    setFilterText: (filterText) => set({ filterText }),
+    setSearchCriteria: (searchCriteria) => set({ searchCriteria: { ...searchCriteria, tags: [...searchCriteria.tags] } }),
     setLoading: (loading) => set({ loading }),
     reset: () => set({
         files: [],
@@ -54,7 +56,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
         currentPath: '',
         metadata: {},
         sortOrder: 'natural',
-        filterText: '',
+        searchCriteria: freshCriteria(),
         loading: false,
     }),
 }));

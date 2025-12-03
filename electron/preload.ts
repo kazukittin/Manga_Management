@@ -32,6 +32,6 @@ contextBridge.exposeInMainWorld('api', {
   savePreferences: (prefs: { viewMode: 'single' | 'double'; readingDirection: 'ltr' | 'rtl' }) => ipcRenderer.invoke('preferences:save', prefs),
   loadPreferences: () => ipcRenderer.invoke('preferences:load'),
   loadMetadata: () => ipcRenderer.invoke('metadata:load'),
-  saveMetadata: (filePath: string, metadata: { author?: string; publisher?: string; tags: string[] }) =>
+  saveMetadata: (filePath: string, metadata: { title?: string; author?: string; publisher?: string; tags: string[] }) =>
     ipcRenderer.invoke('metadata:update', filePath, metadata),
 })

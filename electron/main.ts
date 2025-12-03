@@ -8,6 +8,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 
 type MangaMetadata = {
+  title?: string
   author?: string
   publisher?: string
   tags: string[]
@@ -123,6 +124,7 @@ app.whenReady().then(() => {
     const currentMetadata = store.get('metadata', {}) as Record<string, MangaMetadata>
     currentMetadata[filePath] = {
       ...metadata,
+      title: metadata.title,
       tags: metadata.tags ?? [],
     }
     store.set('metadata', currentMetadata)

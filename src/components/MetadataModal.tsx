@@ -1,10 +1,13 @@
 import React, { useMemo, useState } from 'react';
+import TagInput from './TagInput';
 import { MangaMetadata } from '../types/manga';
+
+type MetadataFormValue = Partial<MangaMetadata>;
 
 interface MetadataModalProps {
     filePath: string;
     metadata?: MangaMetadata;
-    onSave: (metadata: MangaMetadata) => void;
+    onSave: (metadata: MetadataFormValue) => void;
     onClose: () => void;
 }
 
@@ -12,7 +15,6 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
     const [author, setAuthor] = useState<string>(metadata?.author ?? '');
     const [publisher, setPublisher] = useState<string>(metadata?.publisher ?? '');
     const [tags, setTags] = useState<string[]>(metadata?.tags ?? []);
-    const [tagInput, setTagInput] = useState('');
 
     const fileName = useMemo(() => filePath.split(/[\\/]/).pop() || filePath, [filePath]);
 
@@ -23,24 +25,6 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
             publisher: publisher.trim() || undefined,
             tags,
         });
-    };
-
-    const addTag = () => {
-        const value = tagInput.trim();
-        if (!value || tags.includes(value)) return;
-        setTags((prev) => [...prev, value]);
-        setTagInput('');
-    };
-
-    const removeTag = (tag: string) => {
-        setTags((prev) => prev.filter((t) => t !== tag));
-    };
-
-    const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addTag();
-        }
     };
 
     return (
@@ -89,49 +73,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm text-gray-300 mb-1" htmlFor="tagInput">
-                            タグ
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                id="tagInput"
-                                type="text"
-                                value={tagInput}
-                                onChange={(e) => setTagInput(e.target.value)}
-                                onKeyDown={handleTagKeyDown}
-                                className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="タグを入力"
-                            />
-                            <button
-                                type="button"
-                                onClick={addTag}
-                                className="px-3 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                追加
-                            </button>
-                        </div>
-                        {tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {tags.map((tag) => (
-                                    <span
-                                        key={tag}
-                                        className="inline-flex items-center gap-2 bg-gray-800 border border-gray-700 px-2 py-1 rounded-full text-xs text-gray-100"
-                                    >
-                                        #{tag}
-                                        <button
-                                            type="button"
-                                            onClick={() => removeTag(tag)}
-                                            className="text-gray-400 hover:text-white"
-                                            aria-label={`${tag} を削除`}
-                                        >
-                                            ✕
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <TagInput label="タグ" tags={tags} onChange={setTags} />
 
                     <div className="flex justify-end gap-2 pt-2">
                         <button

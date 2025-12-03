@@ -12,7 +12,7 @@ interface Window {
         loadProgress: (filePath: string) => Promise<number>;
         savePreferences: (prefs: { viewMode: 'single' | 'double'; readingDirection: 'ltr' | 'rtl' }) => Promise<void>;
         loadPreferences: () => Promise<{ viewMode: 'single' | 'double'; readingDirection: 'ltr' | 'rtl' }>;
-        loadMetadata: () => Promise<Record<string, { author?: string; publisher?: string; tags: string[] }>>;
-        saveMetadata: (filePath: string, metadata: { author?: string; publisher?: string; tags: string[] }) => Promise<{ author?: string; publisher?: string; tags: string[] }>;
+        loadMetadata: () => Promise<Record<string, { title?: string; author?: string; publisher?: string; tags: string[] }>>;
+        saveMetadata: (filePath: string, metadata: { title?: string; author?: string; publisher?: string; tags: string[] }) => Promise<{ title?: string; author?: string; publisher?: string; tags: string[] }>;
     }
 }

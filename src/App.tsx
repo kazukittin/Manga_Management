@@ -6,7 +6,7 @@ import MetadataModal from './components/MetadataModal';
 import { useLibraryStore } from './store/libraryStore';
 import { useReaderStore } from './store/readerStore';
 import { sortFiles } from './utils/naturalSort';
-import { MangaMetadata } from './types/manga';
+import { MangaItem, MangaMetadata, filterMangaByCriteria } from './types/manga';
 
 function App() {
   const {
@@ -15,7 +15,7 @@ function App() {
     currentPath,
     metadata,
     sortOrder,
-    filterText,
+    searchCriteria,
     loading,
     setFiles,
     setCovers,
@@ -29,6 +29,8 @@ function App() {
 
   const [currentReader, setCurrentReader] = useState<string | null>(null);
   const [metadataTarget, setMetadataTarget] = useState<string | null>(null);
+
+  const fileNameFromPath = (filePath: string) => filePath.split(/[\\/]/).pop() || filePath;
 
   useEffect(() => {
     loadPreferences();
@@ -50,15 +52,17 @@ function App() {
 
       setFiles(fileList);
 
-      // Filter metadata to the files that exist in the current library
+      // Filter metadata to the files that exist in the current library and ensure defaults
       const filteredMetadata: Record<string, MangaMetadata> = {};
       fileList.forEach((filePath) => {
-        if (storedMetadata[filePath]) {
-          filteredMetadata[filePath] = {
-            ...storedMetadata[filePath],
-            tags: storedMetadata[filePath].tags ?? [],
-          };
-        }
+        const fileName = filePath.split(/[\\/]/).pop() || filePath;
+        const entry = storedMetadata[filePath];
+        filteredMetadata[filePath] = {
+          title: entry?.title ?? fileName,
+          author: entry?.author,
+          publisher: entry?.publisher,
+          tags: entry?.tags ?? [],
+        };
       });
       setMetadata(filteredMetadata);
 
@@ -93,10 +97,17 @@ function App() {
     loadSavedLibrary();
   }, []);
 
-  const handleSaveMetadata = async (filePath: string, data: MangaMetadata) => {
+  const handleSaveMetadata = async (filePath: string, data: Partial<MangaMetadata>) => {
     try {
-      updateMetadata(filePath, data);
-      await window.api.saveMetadata(filePath, data);
+      const title = data.title?.trim() || metadata[filePath]?.title || fileNameFromPath(filePath);
+      const payload: MangaMetadata = {
+        ...data,
+        title,
+        tags: data.tags ?? [],
+      };
+
+      updateMetadata(filePath, payload);
+      await window.api.saveMetadata(filePath, payload);
     } catch (error) {
       console.error('Failed to save metadata', error);
     } finally {
@@ -104,26 +115,32 @@ function App() {
     }
   };
 
-  const matchesFilter = (filePath: string) => {
-    if (!filterText) return true;
-
-    const lowerFilter = filterText.toLowerCase();
-    const fileName = filePath.split(/[/\\]/).pop() || filePath;
-    const details = metadata[filePath];
-
-    const textSources = [fileName, details?.author, details?.publisher].filter(Boolean) as string[];
-    const tagMatches = details?.tags?.some((tag) => tag.toLowerCase().includes(lowerFilter));
-
-    return textSources.some((text) => text.toLowerCase().includes(lowerFilter)) || Boolean(tagMatches);
-  };
+  const mangaItems: MangaItem[] = useMemo(
+    () =>
+      files.map((path) => {
+        const existing = metadata[path];
+        const title = existing?.title || fileNameFromPath(path);
+        return {
+          path,
+          metadata: {
+            title,
+            author: existing?.author,
+            publisher: existing?.publisher,
+            tags: existing?.tags ?? [],
+          },
+        };
+      }),
+    [files, metadata]
+  );
 
   // Apply sorting and filtering
   const displayedFiles = useMemo(() => {
-    const filtered = files.filter((file) => matchesFilter(file));
+    const filteredItems = filterMangaByCriteria(mangaItems, searchCriteria);
+    const filteredPaths = filteredItems.map((item) => item.path);
 
     // Sort
-    return sortFiles(filtered, sortOrder);
-  }, [files, sortOrder, filterText, metadata]);
+    return sortFiles(filteredPaths, sortOrder);
+  }, [mangaItems, searchCriteria, sortOrder]);
 
   return (
     <>

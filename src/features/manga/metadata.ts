@@ -1,0 +1,80 @@
+export type SearchMode = 'AND' | 'OR';
+
+export interface MangaMetadata {
+    title: string;
+    author?: string;
+    publisher?: string;
+    tags: string[];
+}
+
+export interface MangaItem {
+    path: string;
+    metadata: MangaMetadata;
+}
+
+export interface MangaSearchCriteria {
+    title?: string;
+    author?: string;
+    publisher?: string;
+    tags: string[];
+    mode: SearchMode;
+}
+
+const normalizeText = (value?: string) => value?.trim().toLowerCase() ?? '';
+
+const normalizeTags = (tags: string[]) => tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
+
+export function filterMangaByCriteria(mangaList: MangaItem[], criteria: MangaSearchCriteria): MangaItem[] {
+    const hasTitle = Boolean(criteria.title?.trim());
+    const hasAuthor = Boolean(criteria.author?.trim());
+    const hasPublisher = Boolean(criteria.publisher?.trim());
+    const hasTags = criteria.tags.length > 0;
+
+    const normalizedTitle = normalizeText(criteria.title);
+    const normalizedAuthor = normalizeText(criteria.author);
+    const normalizedPublisher = normalizeText(criteria.publisher);
+    const normalizedSearchTags = normalizeTags(criteria.tags);
+
+    const noCriteria = !hasTitle && !hasAuthor && !hasPublisher && !hasTags;
+
+    return mangaList.filter(({ metadata }) => {
+        const matchesTitle = hasTitle
+            ? normalizeText(metadata.title).includes(normalizedTitle)
+            : true;
+        const matchesAuthor = hasAuthor
+            ? normalizeText(metadata.author).includes(normalizedAuthor)
+            : true;
+        const matchesPublisher = hasPublisher
+            ? normalizeText(metadata.publisher).includes(normalizedPublisher)
+            : true;
+        const matchesTags = hasTags
+            ? normalizedSearchTags.every((tag) => normalizeTags(metadata.tags).includes(tag))
+            : true;
+
+        if (criteria.mode === 'AND') {
+            return matchesTitle && matchesAuthor && matchesPublisher && matchesTags;
+        }
+
+        // OR search
+        if (noCriteria) return true;
+
+        const tagAnyMatch = hasTags
+            ? normalizeTags(metadata.tags).some((tag) => normalizedSearchTags.includes(tag))
+            : false;
+
+        return (
+            (hasTitle && matchesTitle) ||
+            (hasAuthor && matchesAuthor) ||
+            (hasPublisher && matchesPublisher) ||
+            (hasTags && tagAnyMatch)
+        );
+    });
+}
+
+export const defaultSearchCriteria: MangaSearchCriteria = {
+    title: '',
+    author: '',
+    publisher: '',
+    tags: [],
+    mode: 'AND',
+};
