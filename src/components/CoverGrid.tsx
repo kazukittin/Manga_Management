@@ -45,7 +45,7 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
                                             loading="lazy"
                                         />
                                     ) : (
-                                        <div className="text-gray-600 text-sm">No Cover</div>
+                                        <div className="text-gray-600 text-sm">表紙なし</div>
                                     )}
                                 </div>
                                 <div className="p-2 space-y-1">
@@ -53,10 +53,10 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
                                         {fileName}
                                     </p>
                                     {details?.author && (
-                                        <p className="text-[11px] text-gray-400 truncate">Author: {details.author}</p>
+                                        <p className="text-[11px] text-gray-400 truncate">作者: {details.author}</p>
                                     )}
                                     {details?.publisher && (
-                                        <p className="text-[11px] text-gray-400 truncate">Publisher: {details.publisher}</p>
+                                        <p className="text-[11px] text-gray-400 truncate">出版社: {details.publisher}</p>
                                     )}
                                     {details?.tags?.length ? (
                                         <div className="flex flex-wrap gap-1 pt-1">
@@ -79,7 +79,7 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
                                                 onEditMetadata(filePath);
                                             }}
                                         >
-                                            Edit info
+                                            情報を編集
                                         </button>
                                     )}
                                 </div>
@@ -94,7 +94,7 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
     if (files.length === 0) {
         return (
             <div className="flex items-center justify-center h-full text-gray-500">
-                <p>No files to display</p>
+                <p>表示するファイルがありません</p>
             </div>
         );
     }

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { scanDirectory } from './fileScanner'
 import { registerMangaProtocol } from './imageProtocol'
 import { extractCoversForFiles, getImageCount } from './thumbnailExtractor'
@@ -39,10 +39,14 @@ let win: BrowserWindow | null
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
+
+  // Remove default application menu for a clean window
+  Menu.setApplicationMenu(null)
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
