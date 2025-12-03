@@ -1,41 +1,36 @@
-# ===== Python 基本 =====
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# ===== 仮想環境 =====
-venv/
-env/
-.venv/
+# Dependencies
+node_modules
 
-# ===== PySide6 / Qt 関連 =====
-*.qrc
-*.pyproject
+# Build outputs
+dist
+dist-electron
+dist-ssr
+release
+out
+*.local
 
-# ===== OS が生成するファイル =====
+# OS files
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# ===== ログ =====
-*.log
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# ===== キャッシュ系 =====
-.cache/
-*.cache
-cache/
-thumbnails/
-tmp/
-temp/
-
-# ===== ビルド系（将来 PyInstaller とか使う場合） =====
-build/
-dist/
-*.spec
-
-# ===== IDE / エディタ =====
-.vscode/
-.idea/
-*.swp
-*.swo
+# Electron specific
+*.tsbuildinfo
