@@ -14,7 +14,6 @@ namespace MangaManagement.Panels;
 public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
     private ItemsControl? _itemsOwner;
-    private IItemContainerGenerator? _generator;
     private Size _extent = new(0, 0);
     private Size _viewport = new(0, 0);
     private Point _offset;
@@ -28,12 +27,11 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     {
         base.OnInitialized(e);
         _itemsOwner = ItemsControl.GetItemsOwner(this);
-        _generator = ItemContainerGenerator;
     }
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        if (_itemsOwner == null || _generator == null)
+        if (_itemsOwner == null)
         {
             return availableSize;
         }
@@ -55,7 +53,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         var endIndex = Math.Min(itemCount, startIndex + visibleRowCount * childrenPerRow);
 
         var children = InternalChildren;
-        var generator = _generator.GetItemContainerGeneratorForPanel(this);
+        var generator = ItemContainerGenerator;
 
         using (generator.StartAt(generator.GeneratorPositionFromIndex(startIndex), GeneratorDirection.Forward, true))
         {
@@ -115,11 +113,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
     private int GetGeneratorIndexFromChildIndex(int childIndex)
     {
-        if (_generator == null)
-        {
-            return childIndex;
-        }
-        var startPos = _generator.GeneratorPositionFromIndex(0);
+        var startPos = ItemContainerGenerator.GeneratorPositionFromIndex(0);
         return startPos.Index + childIndex;
     }
 

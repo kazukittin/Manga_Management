@@ -118,8 +118,8 @@ public partial class MainWindow : Window
 
     private void SaveWindowPlacement()
     {
-        var state = WindowState == WindowState.Maximized ? Services.WindowState.Maximized
-            : WindowState == WindowState.Minimized ? Services.WindowState.Minimized
+        var state = WindowState == System.Windows.WindowState.Maximized ? Services.WindowState.Maximized
+            : WindowState == System.Windows.WindowState.Minimized ? Services.WindowState.Minimized
             : Services.WindowState.Normal;
 
         var settings = _settings.Load();
