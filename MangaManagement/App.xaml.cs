@@ -9,6 +9,8 @@ namespace MangaManagement;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    private bool _hasShownUnhandledError;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         // 予期せぬ例外でプロセスが即時終了しないようにメッセージを表示する
@@ -20,7 +22,7 @@ public partial class App : System.Windows.Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        System.Windows.MessageBox.Show($"予期せぬエラーが発生しました。\n{e.Exception.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        ShowFatalError(e.Exception);
         e.Handled = true; // アプリの即時終了を抑止
     }
 
@@ -28,7 +30,23 @@ public partial class App : System.Windows.Application
     {
         if (e.ExceptionObject is Exception ex)
         {
-            System.Windows.MessageBox.Show($"予期せぬエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowFatalError(ex);
         }
+    }
+
+    /// <summary>
+    /// 例外を 1 回だけユーザーへ通知し、連続メッセージボックスの連鎖を防ぐ。
+    /// </summary>
+    private void ShowFatalError(Exception ex)
+    {
+        if (_hasShownUnhandledError)
+        {
+            return;
+        }
+
+        _hasShownUnhandledError = true;
+        System.Windows.MessageBox.Show($"予期せぬエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        // 致命的な状態が続くのを防ぐため、ダイアログ後に終了させる
+        Shutdown();
     }
 }

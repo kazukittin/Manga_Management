@@ -10,6 +10,7 @@ namespace MangaManagement.Panels;
 
 /// <summary>
 /// WrapPanel 風のレイアウトで UI 仮想化を行うカスタムパネル。
+/// 不正なスクロール位置や空データ時にも例外を発生させないようガードする。
 /// </summary>
 public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
@@ -17,6 +18,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     private Size _extent = new(0, 0);
     private Size _viewport = new(0, 0);
     private Point _offset;
+    private int _firstIndex;
 
     public VirtualizingWrapPanel()
     {
@@ -60,18 +62,16 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         EnsureScrollOffsetWithinBounds();
         var firstVisibleRow = (int)Math.Floor(VerticalOffset / itemHeight);
         var visibleRowCount = (int)Math.Ceiling(_viewport.Height / itemHeight) + 1;
-        var startIndex = firstVisibleRow * childrenPerRow;
-        // スクロール位置がアイテム数を超えている場合に備え、生成開始位置をクランプする
-        startIndex = Math.Min(Math.Max(0, itemCount - 1), startIndex);
-        var endIndex = Math.Min(itemCount, startIndex + visibleRowCount * childrenPerRow);
+        _firstIndex = Math.Max(0, Math.Min(itemCount - 1, firstVisibleRow * childrenPerRow));
+        var endIndex = Math.Min(itemCount, _firstIndex + visibleRowCount * childrenPerRow);
 
-        var children = InternalChildren;
         var generator = ItemContainerGenerator;
+        var startPos = generator.GeneratorPositionFromIndex(_firstIndex);
+        int childIndex = 0;
 
-        using (generator.StartAt(generator.GeneratorPositionFromIndex(startIndex), GeneratorDirection.Forward, true))
+        using (generator.StartAt(startPos, GeneratorDirection.Forward, true))
         {
-            int childIndex = 0;
-            for (int itemIndex = startIndex; itemIndex < endIndex; itemIndex++, childIndex++)
+            for (int itemIndex = _firstIndex; itemIndex < endIndex; itemIndex++, childIndex++)
             {
                 bool newlyRealized = false;
                 var child = generator.GenerateNext(out newlyRealized) as UIElement;
@@ -82,7 +82,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
                 if (newlyRealized)
                 {
-                    if (childIndex >= children.Count)
+                    if (childIndex >= InternalChildren.Count)
                     {
                         AddInternalChild(child);
                     }
@@ -97,7 +97,8 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             }
         }
 
-        while (InternalChildren.Count > endIndex - startIndex)
+        // 使われなくなった子要素を削除する
+        while (InternalChildren.Count > endIndex - _firstIndex)
         {
             RemoveInternalChildRange(InternalChildren.Count - 1, 1);
         }
@@ -125,7 +126,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         for (int i = 0; i < InternalChildren.Count; i++)
         {
             var child = InternalChildren[i];
-            int itemIndex = GetGeneratorIndexFromChildIndex(i);
+            int itemIndex = _firstIndex + i;
             int row = itemIndex / childrenPerRow;
             int column = itemIndex % childrenPerRow;
             var rect = new Rect(column * itemWidth, row * itemHeight - VerticalOffset, itemWidth, itemHeight);
@@ -135,10 +136,12 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         return finalSize;
     }
 
-    private int GetGeneratorIndexFromChildIndex(int childIndex)
+    protected override void OnItemsChanged(object sender, ItemsChangedEventArgs args)
     {
-        var startPos = ItemContainerGenerator.GeneratorPositionFromIndex(0);
-        return startPos.Index + childIndex;
+        base.OnItemsChanged(sender, args);
+        // 新しいアイテム追加や削除時はスクロール位置をリセットして計算し直す
+        SetVerticalOffset(0);
+        InvalidateMeasure();
     }
 
     #region IScrollInfo
@@ -165,16 +168,13 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     public void PageLeft() { }
     public void PageRight() { }
 
-    public Rect MakeVisible(Visual visual, Rect rectangle)
-    {
-        return rectangle;
-    }
+    public Rect MakeVisible(Visual visual, Rect rectangle) => rectangle;
 
     public void SetHorizontalOffset(double offset) { }
 
     public void SetVerticalOffset(double offset)
     {
-        offset = Math.Max(0, Math.Min(offset, ExtentHeight - ViewportHeight));
+        offset = Math.Max(0, Math.Min(offset, Math.Max(0, ExtentHeight - ViewportHeight)));
         if (Math.Abs(offset - _offset.Y) > double.Epsilon)
         {
             _offset.Y = offset;
