@@ -41,6 +41,17 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
         var childrenPerRow = Math.Max(1, (int)(availableSize.Width / itemWidth));
         var itemCount = _itemsOwner.HasItems ? _itemsOwner.Items.Count : 0;
+
+        // アイテムが無い場合は早期に返し、GeneratorPositionFromIndex での範囲外例外を防ぐ
+        if (itemCount == 0)
+        {
+            _extent = new Size(availableSize.Width, 0);
+            _viewport = availableSize;
+            EnsureScrollOffsetWithinBounds();
+            RemoveAllChildren();
+            return availableSize;
+        }
+
         var rowCount = (int)Math.Ceiling((double)itemCount / childrenPerRow);
 
         _extent = new Size(availableSize.Width, rowCount * itemHeight);
@@ -50,6 +61,8 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         var firstVisibleRow = (int)Math.Floor(VerticalOffset / itemHeight);
         var visibleRowCount = (int)Math.Ceiling(_viewport.Height / itemHeight) + 1;
         var startIndex = firstVisibleRow * childrenPerRow;
+        // スクロール位置がアイテム数を超えている場合に備え、生成開始位置をクランプする
+        startIndex = Math.Min(Math.Max(0, itemCount - 1), startIndex);
         var endIndex = Math.Min(itemCount, startIndex + visibleRowCount * childrenPerRow);
 
         var children = InternalChildren;
@@ -90,6 +103,17 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         return availableSize;
+    }
+
+    /// <summary>
+    /// アイテムが存在しないときに内部要素をすべて削除する。
+    /// </summary>
+    private void RemoveAllChildren()
+    {
+        if (InternalChildren.Count > 0)
+        {
+            RemoveInternalChildRange(0, InternalChildren.Count);
+        }
     }
 
     protected override Size ArrangeOverride(Size finalSize)
