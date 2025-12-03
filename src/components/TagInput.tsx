@@ -6,9 +6,10 @@ interface TagInputProps {
     addLabel?: string;
     tags: string[];
     onChange: (tags: string[]) => void;
+    availableTags?: string[];
 }
 
-const TagInput: React.FC<TagInputProps> = ({ label, placeholder = 'タグを入力', addLabel = '追加', tags, onChange }) => {
+const TagInput: React.FC<TagInputProps> = ({ label, placeholder = 'タグを入力', addLabel = '追加', tags, onChange, availableTags = [] }) => {
     const [tagInput, setTagInput] = useState('');
 
     const addTag = () => {
@@ -40,12 +41,18 @@ const TagInput: React.FC<TagInputProps> = ({ label, placeholder = 'タグを入�
                 <input
                     id={`tag-input-${label}`}
                     type="text"
+                    list={`tag-datalist-${label}`}
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={placeholder}
                 />
+                <datalist id={`tag-datalist-${label}`}>
+                    {availableTags.map((tag) => (
+                        <option key={tag} value={tag} />
+                    ))}
+                </datalist>
                 <button
                     type="button"
                     onClick={addTag}

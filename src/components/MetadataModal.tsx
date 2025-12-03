@@ -13,7 +13,7 @@ interface MetadataModalProps {
 }
 
 const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSave, onClose }) => {
-    const { authors, publishers } = useMetadataOptions();
+    const { authors, publishers, tags: availableTags } = useMetadataOptions();
     const [author, setAuthor] = useState<string>(metadata?.author ?? '');
     const [publisher, setPublisher] = useState<string>(metadata?.publisher ?? '');
     const [tags, setTags] = useState<string[]>(metadata?.tags ?? []);
@@ -90,7 +90,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
                         </datalist>
                     </div>
 
-                    <TagInput label="タグ" tags={tags} onChange={setTags} />
+                    <TagInput label="タグ" tags={tags} onChange={setTags} availableTags={availableTags} />
 
                     <div className="flex justify-end gap-2 pt-2">
                         <button

@@ -13,7 +13,7 @@ interface LibraryControlsProps {
 
 const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading, hasFolder }) => {
     const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
-    const { authors, publishers } = useMetadataOptions();
+    const { authors, publishers, tags } = useMetadataOptions();
     const [form, setForm] = useState<MangaSearchCriteria>(searchCriteria);
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -123,6 +123,7 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                                 placeholder="タグで検索"
                                 tags={form.tags}
                                 onChange={(tags) => updateCriteria((prev) => ({ ...prev, tags }))}
+                                availableTags={tags}
                             />
                         </div>
                     </div>
