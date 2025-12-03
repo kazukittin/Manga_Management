@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import TagInput from './TagInput';
 import { useLibraryStore, SortOrder } from '../store/libraryStore';
 import { MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
+import './LibraryControls.css';
 
 const LibraryControls: React.FC = () => {
     const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
@@ -47,37 +48,41 @@ const LibraryControls: React.FC = () => {
                 </select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+            <div className="search-container">
+                <div className="search-left">
                     <h2 className="text-sm font-semibold text-gray-200">検索条件</h2>
-                    <input
-                        type="text"
-                        placeholder="タイトルで検索"
-                        value={form.title ?? ''}
-                        onChange={(e) => handleInputChange('title', e.target.value)}
-                        className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                        type="text"
-                        placeholder="作者で検索"
-                        value={form.author ?? ''}
-                        onChange={(e) => handleInputChange('author', e.target.value)}
-                        className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                        type="text"
-                        placeholder="出版社で検索"
-                        value={form.publisher ?? ''}
-                        onChange={(e) => handleInputChange('publisher', e.target.value)}
-                        className="w-full bg-gray-700 text-white px-3 py-2 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <TagInput label="タグ" placeholder="タグで検索" tags={form.tags} onChange={(tags) => setForm((prev) => ({ ...prev, tags }))} />
+                    <div className="search-fields">
+                        <input
+                            type="text"
+                            placeholder="タイトルで検索"
+                            value={form.title ?? ''}
+                            onChange={(e) => handleInputChange('title', e.target.value)}
+                            className="search-input"
+                        />
+                        <input
+                            type="text"
+                            placeholder="作者で検索"
+                            value={form.author ?? ''}
+                            onChange={(e) => handleInputChange('author', e.target.value)}
+                            className="search-input"
+                        />
+                        <input
+                            type="text"
+                            placeholder="出版社で検索"
+                            value={form.publisher ?? ''}
+                            onChange={(e) => handleInputChange('publisher', e.target.value)}
+                            className="search-input"
+                        />
+                    </div>
+                    <div className="tag-row">
+                        <TagInput label="タグ" placeholder="タグで検索" tags={form.tags} onChange={(tags) => setForm((prev) => ({ ...prev, tags }))} />
+                    </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="mode-box">
                     <h2 className="text-sm font-semibold text-gray-200">検索モード</h2>
-                    <div className="flex flex-col gap-2 text-sm text-gray-200">
-                        <label className="flex items-center gap-2">
+                    <div className="mode-options">
+                        <label className="flex items-center gap-2 text-sm text-gray-200">
                             <input
                                 type="radio"
                                 name="search-mode"
@@ -88,7 +93,7 @@ const LibraryControls: React.FC = () => {
                             />
                             <span>すべての条件に一致 (AND検索)</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm text-gray-200">
                             <input
                                 type="radio"
                                 name="search-mode"
@@ -101,18 +106,18 @@ const LibraryControls: React.FC = () => {
                         </label>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 pt-2">
+                    <div className="mode-buttons">
                         <button
                             type="button"
                             onClick={handleApply}
-                            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="action-button primary"
                         >
                             検索
                         </button>
                         <button
                             type="button"
                             onClick={handleReset}
-                            className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:bg-gray-700"
+                            className="action-button secondary"
                         >
                             条件をクリア
                         </button>
