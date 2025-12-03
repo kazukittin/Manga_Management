@@ -6,6 +6,55 @@
     flex-wrap: wrap;
 }
 
+.controls-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #111827;
+    color: #e5e7eb;
+    border: 1px solid #374151;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.toggle-button:hover {
+    background: #1f2937;
+    border-color: #4b5563;
+}
+
+.toggle-button .chevron {
+    display: inline-flex;
+    transition: transform 0.2s ease;
+}
+
+.toggle-button .chevron.open {
+    transform: rotate(180deg);
+}
+
+.collapse-panel {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.25s ease, opacity 0.25s ease, margin-top 0.25s ease;
+}
+
+.collapse-panel.open {
+    max-height: 800px;
+    opacity: 1;
+    margin-top: 4px;
+}
+
 .search-left {
     flex: 1;
     min-width: 0;
