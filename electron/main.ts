@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { scanDirectory } from './fileScanner'
 import { registerMangaProtocol } from './imageProtocol'
-import { extractCoversForFiles, getImageCount } from './thumbnailExtractor'
+import { extractCoversForFiles, extractCoversBatch, getImageCount } from './thumbnailExtractor'
 import store from './store'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -103,6 +103,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('library:getCovers', async (_event, filePaths: string[]) => {
     return await extractCoversForFiles(filePaths)
+  })
+
+  ipcMain.handle('library:getCoversBatch', async (_event, filePaths: string[], startIndex: number, count: number) => {
+    return await extractCoversBatch(filePaths, startIndex, count)
   })
 
   ipcMain.handle('library:getSavedRoot', async () => {

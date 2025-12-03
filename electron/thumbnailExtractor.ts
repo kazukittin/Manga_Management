@@ -47,13 +47,56 @@ export async function extractCoverImage(archivePath: string): Promise<string | n
 
 export async function extractCoversForFiles(filePaths: string[]): Promise<Record<string, string>> {
     const covers: Record<string, string> = {};
+    const BATCH_SIZE = 50; // Process 50 files at a time to avoid overwhelming the system
 
-    for (const filePath of filePaths) {
-        const coverUrl = await extractCoverImage(filePath);
+    // Process files in batches with parallel execution within each batch
+    for (let i = 0; i < filePaths.length; i += BATCH_SIZE) {
+        const batch = filePaths.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(
+            batch.map(async (filePath) => {
+                const coverUrl = await extractCoverImage(filePath);
+                return { filePath, coverUrl };
+            })
+        );
+
+        // Merge batch results into covers object
+        batchResults.forEach(({ filePath, coverUrl }) => {
+            if (coverUrl) {
+                covers[filePath] = coverUrl;
+            }
+        });
+    }
+
+    return covers;
+}
+
+/**
+ * Extract covers for a specific batch of files (for lazy loading)
+ * @param filePaths Array of file paths to extract covers from
+ * @param startIndex Starting index in the array
+ * @param count Number of covers to extract
+ */
+export async function extractCoversBatch(
+    filePaths: string[],
+    startIndex: number,
+    count: number
+): Promise<Record<string, string>> {
+    const covers: Record<string, string> = {};
+    const endIndex = Math.min(startIndex + count, filePaths.length);
+    const batch = filePaths.slice(startIndex, endIndex);
+
+    const results = await Promise.all(
+        batch.map(async (filePath) => {
+            const coverUrl = await extractCoverImage(filePath);
+            return { filePath, coverUrl };
+        })
+    );
+
+    results.forEach(({ filePath, coverUrl }) => {
         if (coverUrl) {
             covers[filePath] = coverUrl;
         }
-    }
+    });
 
     return covers;
 }

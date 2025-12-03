@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('api', {
   selectDirectory: () => ipcRenderer.invoke('dialog:openDirectory'),
   scanLibrary: (path: string) => ipcRenderer.invoke('library:scan', path),
   getCovers: (filePaths: string[]) => ipcRenderer.invoke('library:getCovers', filePaths),
+  getCoversBatch: (filePaths: string[], startIndex: number, count: number) => ipcRenderer.invoke('library:getCoversBatch', filePaths, startIndex, count),
   getSavedRoot: () => ipcRenderer.invoke('library:getSavedRoot'),
   setRoot: (path: string) => ipcRenderer.invoke('library:setRoot', path),
   getImageCount: (archivePath: string) => ipcRenderer.invoke('archive:getImageCount', archivePath),

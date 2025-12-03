@@ -5,6 +5,7 @@ interface Window {
         selectDirectory: () => Promise<string | null>;
         scanLibrary: (path: string) => Promise<string[]>;
         getCovers: (filePaths: string[]) => Promise<Record<string, string>>;
+        getCoversBatch: (filePaths: string[], startIndex: number, count: number) => Promise<Record<string, string>>;
         getSavedRoot: () => Promise<string | null>;
         setRoot: (path: string) => Promise<string>;
         getImageCount: (archivePath: string) => Promise<number>;

@@ -70,7 +70,10 @@ function App() {
       });
       setMetadata(filteredMetadata);
 
-      const coverData = await window.api.getCovers(fileList);
+      // Load only the first batch of covers for faster initial display
+      const INITIAL_BATCH_SIZE = 100;
+      const initialBatch = fileList.slice(0, INITIAL_BATCH_SIZE);
+      const coverData = await window.api.getCovers(initialBatch);
       setCovers(coverData);
     } catch (error) {
       console.error('Error loading library:', error);
@@ -186,6 +189,20 @@ function App() {
                 setCurrentReader(filePath);
               }}
               onEditMetadata={(filePath) => setMetadataTarget(filePath)}
+              onRangeChanged={async (startIndex: number, endIndex: number) => {
+                // Load covers for the visible range
+                const visibleFiles = displayedFiles.slice(startIndex, endIndex);
+                const missingCovers = visibleFiles.filter((filePath: string) => !covers[filePath]);
+
+                if (missingCovers.length > 0) {
+                  try {
+                    const newCovers = await window.api.getCovers(missingCovers);
+                    setCovers((prev: Record<string, string>) => ({ ...prev, ...newCovers }));
+                  } catch (error) {
+                    console.error('Error loading covers:', error);
+                  }
+                }
+              }}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-4">

@@ -13,7 +13,8 @@ interface LibraryState {
     loading: boolean;
 
     setFiles: (files: string[]) => void;
-    setCovers: (covers: Record<string, string>) => void;
+    setCovers: (covers: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
+    addCovers: (newCovers: Record<string, string>) => void;
     setCurrentPath: (path: string) => void;
     setMetadata: (metadata: Record<string, MangaMetadata>) => void;
     updateMetadata: (path: string, metadata: MangaMetadata) => void;
@@ -35,7 +36,10 @@ export const useLibraryStore = create<LibraryState>((set) => ({
     loading: false,
 
     setFiles: (files) => set({ files }),
-    setCovers: (covers) => set({ covers }),
+    setCovers: (covers) => set((state) => ({
+        covers: typeof covers === 'function' ? covers(state.covers) : covers
+    })),
+    addCovers: (newCovers) => set((state) => ({ covers: { ...state.covers, ...newCovers } })),
     setCurrentPath: (currentPath) => set({ currentPath }),
     setMetadata: (metadata) => set({ metadata }),
     updateMetadata: (path, metadata) => set((state) => ({
