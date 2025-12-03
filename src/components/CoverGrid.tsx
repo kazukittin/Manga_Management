@@ -1,15 +1,18 @@
 import React from 'react';
 import { Virtuoso } from 'react-virtuoso';
+import { MangaMetadata } from '../types/manga';
 
 interface CoverGridProps {
     files: string[];
     covers: Record<string, string>;
     onItemClick?: (filePath: string) => void;
+    metadata?: Record<string, MangaMetadata>;
+    onEditMetadata?: (filePath: string) => void;
 }
 
 const ITEMS_PER_ROW = 5;
 
-const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick }) => {
+const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metadata = {}, onEditMetadata }) => {
     // Group files into rows
     const rows: string[][] = [];
     for (let i = 0; i < files.length; i += ITEMS_PER_ROW) {
@@ -24,6 +27,7 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick }) => 
                 {items.map((filePath) => {
                     const coverUrl = covers[filePath];
                     const fileName = filePath.split(/[/\\]/).pop() || filePath;
+                    const details = metadata[filePath];
 
                     return (
                         <div
@@ -44,10 +48,40 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick }) => 
                                         <div className="text-gray-600 text-sm">No Cover</div>
                                     )}
                                 </div>
-                                <div className="p-2 h-[60px]">
+                                <div className="p-2 space-y-1">
                                     <p className="text-xs text-gray-300 truncate group-hover:text-blue-400 transition-colors" title={fileName}>
                                         {fileName}
                                     </p>
+                                    {details?.author && (
+                                        <p className="text-[11px] text-gray-400 truncate">Author: {details.author}</p>
+                                    )}
+                                    {details?.publisher && (
+                                        <p className="text-[11px] text-gray-400 truncate">Publisher: {details.publisher}</p>
+                                    )}
+                                    {details?.tags?.length ? (
+                                        <div className="flex flex-wrap gap-1 pt-1">
+                                            {details.tags.map((tag) => (
+                                                <span
+                                                    key={tag}
+                                                    className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full"
+                                                >
+                                                    #{tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                    {onEditMetadata && (
+                                        <button
+                                            type="button"
+                                            className="mt-1 text-[11px] text-blue-400 hover:text-blue-300"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onEditMetadata(filePath);
+                                            }}
+                                        >
+                                            Edit info
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

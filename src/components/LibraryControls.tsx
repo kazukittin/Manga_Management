@@ -25,7 +25,7 @@ const LibraryControls: React.FC = () => {
             <div className="flex-1 max-w-md">
                 <input
                     type="text"
-                    placeholder="Filter by name..."
+                    placeholder="Filter by name, author, publisher or tag..."
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
                     className="w-full bg-gray-700 text-white px-3 py-1.5 rounded text-sm border border-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"

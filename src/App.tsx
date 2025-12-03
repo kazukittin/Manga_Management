@@ -2,69 +2,128 @@ import { useEffect, useMemo, useState } from 'react';
 import CoverGrid from './components/CoverGrid';
 import LibraryControls from './components/LibraryControls';
 import Reader from './components/Reader';
+import MetadataModal from './components/MetadataModal';
 import { useLibraryStore } from './store/libraryStore';
 import { useReaderStore } from './store/readerStore';
 import { sortFiles } from './utils/naturalSort';
+import { MangaMetadata } from './types/manga';
 
 function App() {
   const {
     files,
     covers,
     currentPath,
+    metadata,
     sortOrder,
     filterText,
     loading,
     setFiles,
     setCovers,
     setCurrentPath,
+    setMetadata,
+    updateMetadata,
     setLoading,
   } = useLibraryStore();
 
   const { loadPreferences } = useReaderStore();
 
   const [currentReader, setCurrentReader] = useState<string | null>(null);
+  const [metadataTarget, setMetadataTarget] = useState<string | null>(null);
 
   useEffect(() => {
     loadPreferences();
   }, [loadPreferences]);
 
+  const loadLibrary = async (path: string, persistSelection = false) => {
+    setCurrentPath(path);
+    setLoading(true);
+
+    try {
+      if (persistSelection) {
+        await window.api.setRoot(path);
+      }
+
+      const [fileList, storedMetadata] = await Promise.all([
+        window.api.scanLibrary(path),
+        window.api.loadMetadata(),
+      ]);
+
+      setFiles(fileList);
+
+      // Filter metadata to the files that exist in the current library
+      const filteredMetadata: Record<string, MangaMetadata> = {};
+      fileList.forEach((filePath) => {
+        if (storedMetadata[filePath]) {
+          filteredMetadata[filePath] = {
+            ...storedMetadata[filePath],
+            tags: storedMetadata[filePath].tags ?? [],
+          };
+        }
+      });
+      setMetadata(filteredMetadata);
+
+      const coverData = await window.api.getCovers(fileList);
+      setCovers(coverData);
+    } catch (error) {
+      console.error('Error loading library:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOpenFolder = async () => {
     const path = await window.api.selectDirectory();
     if (path) {
-      setCurrentPath(path);
-      setLoading(true);
-
-      try {
-        // Scan library
-        const fileList = await window.api.scanLibrary(path);
-        setFiles(fileList);
-
-        // Get covers
-        const coverData = await window.api.getCovers(fileList);
-        setCovers(coverData);
-      } catch (error) {
-        console.error('Error loading library:', error);
-      } finally {
-        setLoading(false);
-      }
+      await loadLibrary(path, true);
     }
+  };
+
+  useEffect(() => {
+    const loadSavedLibrary = async () => {
+      try {
+        const savedPath = await window.api.getSavedRoot();
+        if (savedPath) {
+          await loadLibrary(savedPath, false);
+        }
+      } catch (error) {
+        console.error('Failed to load saved library path:', error);
+      }
+    };
+
+    loadSavedLibrary();
+  }, []);
+
+  const handleSaveMetadata = async (filePath: string, data: MangaMetadata) => {
+    try {
+      updateMetadata(filePath, data);
+      await window.api.saveMetadata(filePath, data);
+    } catch (error) {
+      console.error('Failed to save metadata', error);
+    } finally {
+      setMetadataTarget(null);
+    }
+  };
+
+  const matchesFilter = (filePath: string) => {
+    if (!filterText) return true;
+
+    const lowerFilter = filterText.toLowerCase();
+    const fileName = filePath.split(/[/\\]/).pop() || filePath;
+    const details = metadata[filePath];
+
+    const textSources = [fileName, details?.author, details?.publisher].filter(Boolean) as string[];
+    const tagMatches = details?.tags?.some((tag) => tag.toLowerCase().includes(lowerFilter));
+
+    return textSources.some((text) => text.toLowerCase().includes(lowerFilter)) || Boolean(tagMatches);
   };
 
   // Apply sorting and filtering
   const displayedFiles = useMemo(() => {
-    let filtered = files;
-
-    // Filter by text
-    if (filterText) {
-      const lowerFilter = filterText.toLowerCase();
-      filtered = files.filter((file: string) =>
-        file.toLowerCase().includes(lowerFilter)
-      );
-    }
+    const filtered = files.filter((file) => matchesFilter(file));
 
     // Sort
     return sortFiles(filtered, sortOrder);
-  }, [files, sortOrder, filterText]);
+  }, [files, sortOrder, filterText, metadata]);
 
   return (
     <>
@@ -72,6 +131,15 @@ function App() {
         <Reader
           archivePath={currentReader}
           onClose={() => setCurrentReader(null)}
+        />
+      )}
+
+      {metadataTarget && (
+        <MetadataModal
+          filePath={metadataTarget}
+          metadata={metadata[metadataTarget]}
+          onSave={(data) => handleSaveMetadata(metadataTarget, data)}
+          onClose={() => setMetadataTarget(null)}
         />
       )}
 
@@ -83,7 +151,7 @@ function App() {
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed px-4 py-2 rounded text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
           >
-            {loading ? 'Loading...' : 'Open Folder'}
+            {loading ? 'Loading...' : currentPath ? 'Change Folder' : 'Open Folder'}
           </button>
         </header>
 
@@ -99,9 +167,11 @@ function App() {
             <CoverGrid
               files={displayedFiles}
               covers={covers}
+              metadata={metadata}
               onItemClick={(filePath: string) => {
                 setCurrentReader(filePath);
               }}
+              onEditMetadata={(filePath) => setMetadataTarget(filePath)}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
