@@ -20,7 +20,7 @@ public partial class App : System.Windows.Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        MessageBox.Show($"予期せぬエラーが発生しました。\n{e.Exception.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        System.Windows.MessageBox.Show($"予期せぬエラーが発生しました。\n{e.Exception.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true; // アプリの即時終了を抑止
     }
 
@@ -28,7 +28,7 @@ public partial class App : System.Windows.Application
     {
         if (e.ExceptionObject is Exception ex)
         {
-            MessageBox.Show($"予期せぬエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            System.Windows.MessageBox.Show($"予期せぬエラーが発生しました。\n{ex.Message}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }
