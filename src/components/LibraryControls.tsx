@@ -19,12 +19,20 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
         setForm(searchCriteria);
     }, [searchCriteria]);
 
+    const updateCriteria = (updater: (prev: MangaSearchCriteria) => MangaSearchCriteria) => {
+        setForm((prev) => {
+            const next = updater(prev);
+            setSearchCriteria({ ...next, tags: [...next.tags] });
+            return next;
+        });
+    };
+
     const handleInputChange = (key: keyof MangaSearchCriteria, value: string) => {
-        setForm((prev) => ({ ...prev, [key]: value }));
+        updateCriteria((prev) => ({ ...prev, [key]: value }));
     };
 
     const handleModeChange = (mode: MangaSearchCriteria['mode']) => {
-        setForm((prev) => ({ ...prev, mode }));
+        updateCriteria((prev) => ({ ...prev, mode }));
     };
 
     const handleApply = () => {
@@ -100,7 +108,12 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                             />
                         </div>
                         <div className="tag-row">
-                            <TagInput label="タグ" placeholder="タグで検索" tags={form.tags} onChange={(tags) => setForm((prev) => ({ ...prev, tags }))} />
+                            <TagInput
+                                label="タグ"
+                                placeholder="タグで検索"
+                                tags={form.tags}
+                                onChange={(tags) => updateCriteria((prev) => ({ ...prev, tags }))}
+                            />
                         </div>
                     </div>
 
