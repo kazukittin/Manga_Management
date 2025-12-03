@@ -34,3 +34,6 @@ Thumbs.db
 
 # Electron specific
 *.tsbuildinfo
+
+# Local app persistence
+config.json

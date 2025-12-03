@@ -32,6 +32,8 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     loadPreferences: async () => {
         try {
             const prefs = await window.api.loadPreferences();
+            if (!prefs) return;
+
             set({ viewMode: prefs.viewMode, readingDirection: prefs.readingDirection });
         } catch (error) {
             console.error('Failed to load preferences:', error);
@@ -48,8 +50,6 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     },
 
     reset: () => set({
-        viewMode: 'single',
-        readingDirection: 'rtl',
         currentPage: 0,
     }),
 }));
