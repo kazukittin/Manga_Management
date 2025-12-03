@@ -160,8 +160,35 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     }
     #endregion
 
-    public double ItemWidth { get; set; }
-    public double ItemHeight { get; set; }
+    /// <summary>
+    /// 各アイテムの幅（WPF の Binding が使えるよう DependencyProperty 化）。
+    /// </summary>
+    public double ItemWidth
+    {
+        get => (double)GetValue(ItemWidthProperty);
+        set => SetValue(ItemWidthProperty, value);
+    }
+
+    /// <summary>
+    /// 各アイテムの高さ（WPF の Binding が使えるよう DependencyProperty 化）。
+    /// </summary>
+    public double ItemHeight
+    {
+        get => (double)GetValue(ItemHeightProperty);
+        set => SetValue(ItemHeightProperty, value);
+    }
+
+    public static readonly DependencyProperty ItemWidthProperty = DependencyProperty.Register(
+        nameof(ItemWidth),
+        typeof(double),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
+
+    public static readonly DependencyProperty ItemHeightProperty = DependencyProperty.Register(
+        nameof(ItemHeight),
+        typeof(double),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(double.NaN, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
 
     private void EnsureScrollOffsetWithinBounds()
     {
