@@ -72,9 +72,16 @@ public partial class MainWindow : Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        RestoreWindowPlacement();
-        // ロード完了後に最後に開いた作品があれば自動で選択する
-        await RestoreLibraryAsync();
+        try
+        {
+            RestoreWindowPlacement();
+            // ロード完了後に最後に開いた作品があれば自動で選択する
+            await RestoreLibraryAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"起動処理でエラーが発生しました。\n{ex.Message}", "起動エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async Task RestoreLibraryAsync()
