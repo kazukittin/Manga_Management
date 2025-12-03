@@ -109,9 +109,9 @@ public partial class MainWindow : Window
         {
             WindowState = settings.WindowState.Value switch
             {
-                Services.WindowState.Maximized => WindowState.Maximized,
-                Services.WindowState.Minimized => WindowState.Minimized,
-                _ => WindowState.Normal
+                Services.WindowState.Maximized => System.Windows.WindowState.Maximized,
+                Services.WindowState.Minimized => System.Windows.WindowState.Minimized,
+                _ => System.Windows.WindowState.Normal
             };
         }
     }
