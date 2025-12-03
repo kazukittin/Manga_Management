@@ -7,7 +7,7 @@ namespace MangaManagement;
 /// アプリケーションのエントリポイント。StartupUri で本棚画面を開く。
 /// グローバル例外を捕捉して即時終了を防止し、ユーザーへ内容を通知する。
 /// </summary>
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
