@@ -46,6 +46,8 @@ function createWindow() {
     },
   })
 
+  win.maximize()
+
   // Remove default application menu for a clean window
   Menu.setApplicationMenu(null)
 

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import TagInput from './TagInput';
 import { MangaMetadata } from '../types/manga';
+import { useMetadataOptions } from '../hooks/useMetadataOptions';
 
 type MetadataFormValue = Partial<MangaMetadata>;
 
@@ -12,6 +13,7 @@ interface MetadataModalProps {
 }
 
 const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSave, onClose }) => {
+    const { authors, publishers } = useMetadataOptions();
     const [author, setAuthor] = useState<string>(metadata?.author ?? '');
     const [publisher, setPublisher] = useState<string>(metadata?.publisher ?? '');
     const [tags, setTags] = useState<string[]>(metadata?.tags ?? []);
@@ -55,11 +57,17 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
                         <input
                             id="author"
                             type="text"
+                            list="author-list"
                             value={author}
                             onChange={(e) => setAuthor(e.target.value)}
                             className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="例: 尾田 栄一郎"
                         />
+                        <datalist id="author-list">
+                            {authors.map((a) => (
+                                <option key={a} value={a} />
+                            ))}
+                        </datalist>
                     </div>
 
                     <div>
@@ -69,11 +77,17 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
                         <input
                             id="publisher"
                             type="text"
+                            list="publisher-list"
                             value={publisher}
                             onChange={(e) => setPublisher(e.target.value)}
                             className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="例: 集英社"
                         />
+                        <datalist id="publisher-list">
+                            {publishers.map((p) => (
+                                <option key={p} value={p} />
+                            ))}
+                        </datalist>
                     </div>
 
                     <TagInput label="タグ" tags={tags} onChange={setTags} />

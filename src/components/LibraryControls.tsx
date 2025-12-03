@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import TagInput from './TagInput';
 import { useLibraryStore, SortOrder } from '../store/libraryStore';
 import { MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
+import { useMetadataOptions } from '../hooks/useMetadataOptions';
 import './LibraryControls.css';
 
 interface LibraryControlsProps {
@@ -12,6 +13,7 @@ interface LibraryControlsProps {
 
 const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading, hasFolder }) => {
     const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
+    const { authors, publishers } = useMetadataOptions();
     const [form, setForm] = useState<MangaSearchCriteria>(searchCriteria);
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -57,6 +59,8 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                         <option value="natural">自然順</option>
                         <option value="name">名前 (A-Z)</option>
                         <option value="date">更新日</option>
+                        <option value="author">作者順</option>
+                        <option value="publisher">出版社順</option>
                     </select>
                 </div>
 
@@ -88,20 +92,30 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                                 onChange={(e) => handleInputChange('title', e.target.value)}
                                 className="search-input"
                             />
-                            <input
-                                type="text"
-                                placeholder="作者で検索"
+                            <select
                                 value={form.author ?? ''}
                                 onChange={(e) => handleInputChange('author', e.target.value)}
                                 className="search-input"
-                            />
-                            <input
-                                type="text"
-                                placeholder="出版社で検索"
+                            >
+                                <option value="">全ての作者</option>
+                                {authors.map((author) => (
+                                    <option key={author} value={author}>
+                                        {author}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
                                 value={form.publisher ?? ''}
                                 onChange={(e) => handleInputChange('publisher', e.target.value)}
                                 className="search-input"
-                            />
+                            >
+                                <option value="">全ての出版社</option>
+                                {publishers.map((publisher) => (
+                                    <option key={publisher} value={publisher}>
+                                        {publisher}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                         <div className="tag-row">
                             <TagInput

@@ -143,7 +143,7 @@ function App() {
     const filteredPaths = filteredItems.map((item) => item.path);
 
     // Sort
-    return sortFiles(filteredPaths, sortOrder);
+    return sortFiles(filteredPaths, sortOrder, metadata);
   }, [mangaItems, searchCriteria, sortOrder]);
 
   return (

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { MangaMetadata, MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
 
-export type SortOrder = 'name' | 'natural' | 'date';
+export type SortOrder = 'name' | 'natural' | 'date' | 'author' | 'publisher';
 
 interface LibraryState {
     files: string[];
