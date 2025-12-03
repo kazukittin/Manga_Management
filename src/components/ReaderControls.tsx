@@ -9,6 +9,7 @@ interface ReaderControlsProps {
     onViewModeChange: (mode: ViewMode) => void;
     onReadingDirectionChange: (direction: 'ltr' | 'rtl') => void;
     onClose: () => void;
+    visible: boolean;
 }
 
 const ReaderControls: React.FC<ReaderControlsProps> = ({
@@ -19,9 +20,13 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
     onViewModeChange,
     onReadingDirectionChange,
     onClose,
+    visible,
 }) => {
     return (
-        <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent p-4">
+        <div
+            className={`absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent p-4 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                }`}
+        >
             <div className="flex items-center justify-between">
                 <button
                     onClick={onClose}
@@ -42,8 +47,8 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                         <button
                             onClick={() => onViewModeChange(viewMode === 'single' ? 'double' : 'single')}
                             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${viewMode === 'single'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
                             単ページ
@@ -51,8 +56,8 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                         <button
                             onClick={() => onViewModeChange(viewMode === 'double' ? 'single' : 'double')}
                             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${viewMode === 'double'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
                             見開き
@@ -63,8 +68,8 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                         <button
                             onClick={() => onReadingDirectionChange(readingDirection === 'ltr' ? 'rtl' : 'ltr')}
                             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${readingDirection === 'ltr'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
                             左→右
@@ -72,8 +77,8 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                         <button
                             onClick={() => onReadingDirectionChange(readingDirection === 'rtl' ? 'ltr' : 'rtl')}
                             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${readingDirection === 'rtl'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                         >
                             右→左

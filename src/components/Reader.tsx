@@ -23,6 +23,35 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
 
     const [totalPages, setTotalPages] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [showControls, setShowControls] = useState(false);
+    const [showCursor, setShowCursor] = useState(true);
+
+    // Mouse movement handler for controls and cursor visibility
+    useEffect(() => {
+        let cursorTimer: NodeJS.Timeout;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            // Show cursor and reset timer
+            setShowCursor(true);
+            clearTimeout(cursorTimer);
+            cursorTimer = setTimeout(() => {
+                setShowCursor(false);
+            }, 5000);
+
+            // Show controls if mouse is at top (within 100px)
+            if (e.clientY < 100) {
+                setShowControls(true);
+            } else {
+                setShowControls(false);
+            }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            clearTimeout(cursorTimer);
+        };
+    }, []);
 
     // Load total page count
     useEffect(() => {
@@ -120,7 +149,7 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
         setCurrentPage(prev);
     };
 
-    useKeyboardNav({ onNext: handleNext, onPrev: handlePrev });
+    useKeyboardNav({ onNext: handleNext, onPrev: handlePrev, onEsc: onClose });
 
     // Click zone navigation
     const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -167,7 +196,7 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
 
     return (
         <div
-            className="fixed inset-0 bg-black z-50 overflow-hidden cursor-pointer"
+            className={`fixed inset-0 bg-black z-50 overflow-hidden ${showCursor ? 'cursor-pointer' : 'cursor-none'}`}
             onClick={handleClick}
             onWheel={handleWheel}
         >
@@ -179,6 +208,7 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
                 onViewModeChange={setViewMode}
                 onReadingDirectionChange={setReadingDirection}
                 onClose={onClose}
+                visible={showControls}
             />
 
             <div className="h-full flex items-center justify-center p-4">

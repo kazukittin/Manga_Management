@@ -3,10 +3,11 @@ import { useEffect } from 'react';
 interface UseKeyboardNavProps {
     onNext: () => void;
     onPrev: () => void;
+    onEsc?: () => void;
     enabled?: boolean;
 }
 
-export function useKeyboardNav({ onNext, onPrev, enabled = true }: UseKeyboardNavProps) {
+export function useKeyboardNav({ onNext, onPrev, onEsc, enabled = true }: UseKeyboardNavProps) {
     useEffect(() => {
         if (!enabled) return;
 
@@ -24,10 +25,16 @@ export function useKeyboardNav({ onNext, onPrev, enabled = true }: UseKeyboardNa
                     e.preventDefault();
                     onPrev();
                     break;
+                case 'Escape':
+                    if (onEsc) {
+                        e.preventDefault();
+                        onEsc();
+                    }
+                    break;
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onNext, onPrev, enabled]);
+    }, [onNext, onPrev, onEsc, enabled]);
 }
