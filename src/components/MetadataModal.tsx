@@ -100,7 +100,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
                                 onClick={onDelete}
                                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors text-sm"
                             >
-                                ファイルを削除
+                                マンガを削除
                             </button>
                         )}
                         <div className="flex gap-2 ml-auto">

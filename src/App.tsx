@@ -147,7 +147,7 @@ function App() {
   };
 
   const handleDeleteManga = async (filePath: string) => {
-    if (!window.confirm('本当にこのファイルを削除しますか？\nこの操作は取り消せませんが、ファイルはゴミ箱に移動されます。')) {
+    if (!window.confirm('本当にこのマンガを削除しますか？\nこの操作は取り消せませんが、ファイルはゴミ箱に移動されます。')) {
       return;
     }
 
