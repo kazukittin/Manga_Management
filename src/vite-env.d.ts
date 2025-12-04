@@ -15,5 +15,6 @@ interface Window {
         loadPreferences: () => Promise<{ viewMode: 'single' | 'double'; readingDirection: 'ltr' | 'rtl' }>;
         loadMetadata: () => Promise<Record<string, { title?: string; author?: string; publisher?: string; tags: string[] }>>;
         saveMetadata: (filePath: string, metadata: { title?: string; author?: string; publisher?: string; tags: string[] }) => Promise<{ title?: string; author?: string; publisher?: string; tags: string[] }>;
+        deleteManga: (filePath: string) => Promise<{ success: boolean; error?: string }>;
     }
 }

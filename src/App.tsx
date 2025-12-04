@@ -146,6 +146,33 @@ function App() {
     }
   };
 
+  const handleDeleteManga = async (filePath: string) => {
+    if (!window.confirm('本当にこのファイルを削除しますか？\nこの操作は取り消せませんが、ファイルはゴミ箱に移動されます。')) {
+      return;
+    }
+
+    try {
+      const result = await window.api.deleteManga(filePath);
+      if (result.success) {
+        // Remove from local state
+        setFiles(files.filter(f => f !== filePath));
+
+        // Close modal if open
+        setMetadataTarget(null);
+
+        // Clear selection if deleted file was selected
+        if (selectedCard === filePath) {
+          setSelectedCard(null);
+        }
+      } else {
+        alert(`削除に失敗しました: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting manga:', error);
+      alert('削除中にエラーが発生しました');
+    }
+  };
+
   const mangaItems: MangaItem[] = useMemo(
     () =>
       files.map((path) => {
@@ -188,6 +215,7 @@ function App() {
           metadata={metadata[metadataTarget]}
           onSave={(data) => handleSaveMetadata(metadataTarget, data)}
           onClose={() => setMetadataTarget(null)}
+          onDelete={() => handleDeleteManga(metadataTarget)}
         />
       )}
 

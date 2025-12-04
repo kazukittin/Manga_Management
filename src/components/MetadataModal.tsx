@@ -10,9 +10,10 @@ interface MetadataModalProps {
     metadata?: MangaMetadata;
     onSave: (metadata: MetadataFormValue) => void;
     onClose: () => void;
+    onDelete?: () => void;
 }
 
-const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSave, onClose }) => {
+const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSave, onClose, onDelete }) => {
     const { authors, publishers, tags: availableTags } = useMetadataOptions();
     const [author, setAuthor] = useState<string>(metadata?.author ?? '');
     const [publisher, setPublisher] = useState<string>(metadata?.publisher ?? '');
@@ -92,20 +93,31 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
 
                     <TagInput label="タグ" tags={tags} onChange={setTags} availableTags={availableTags} />
 
-                    <div className="flex justify-end gap-2 pt-2">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:bg-gray-700"
-                        >
-                            キャンセル
-                        </button>
-                        <button
-                            type="submit"
-                            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            保存
-                        </button>
+                    <div className="flex justify-between pt-4 border-t border-gray-700">
+                        {onDelete && (
+                            <button
+                                type="button"
+                                onClick={onDelete}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors text-sm"
+                            >
+                                ファイルを削除
+                            </button>
+                        )}
+                        <div className="flex gap-2 ml-auto">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 rounded bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:bg-gray-700"
+                            >
+                                キャンセル
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                保存
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
