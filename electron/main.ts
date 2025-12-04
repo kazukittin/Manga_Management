@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell } from 'electron'
 import { scanDirectory } from './fileScanner'
 import { registerMangaProtocol } from './imageProtocol'
 import { extractCoversForFiles, extractCoversBatch, getImageCount } from './thumbnailExtractor'
@@ -108,6 +108,17 @@ app.whenReady().then(() => {
   ipcMain.handle('library:getCoversBatch', async (_event, filePaths: string[], startIndex: number, count: number) => {
     return await extractCoversBatch(filePaths, startIndex, count)
   })
+
+  ipcMain.handle('library:deleteManga', async (_, filePath: string) => {
+    try {
+      // Use shell.trashItem to move to trash instead of permanent delete for safety
+      await shell.trashItem(filePath);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+      return { success: false, error: String(error) };
+    }
+  });
 
   ipcMain.handle('library:getSavedRoot', async () => {
     const savedPath = store.get('mangaRootPath')

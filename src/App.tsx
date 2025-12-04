@@ -3,6 +3,7 @@ import CoverGrid from './components/CoverGrid';
 import LibraryControls from './components/LibraryControls';
 import Reader from './components/Reader';
 import MetadataModal from './components/MetadataModal';
+import ConfirmationModal from './components/ConfirmationModal';
 import { useLibraryStore } from './store/libraryStore';
 import { useReaderStore } from './store/readerStore';
 import { sortFiles } from './utils/naturalSort';
@@ -33,6 +34,7 @@ function App() {
 
   const [currentReader, setCurrentReader] = useState<string | null>(null);
   const [metadataTarget, setMetadataTarget] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const handleOpenReader = async (filePath: string) => {
     try {
@@ -146,22 +148,24 @@ function App() {
     }
   };
 
-  const handleDeleteManga = async (filePath: string) => {
-    if (!window.confirm('本当にこのマンガを削除しますか？\nこの操作は取り消せませんが、ファイルはゴミ箱に移動されます。')) {
-      return;
-    }
+  const confirmDelete = (filePath: string) => {
+    setDeleteTarget(filePath);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const result = await window.api.deleteManga(filePath);
+      const result = await window.api.deleteManga(deleteTarget);
       if (result.success) {
         // Remove from local state
-        setFiles(files.filter(f => f !== filePath));
+        setFiles(files.filter(f => f !== deleteTarget));
 
         // Close modal if open
         setMetadataTarget(null);
 
         // Clear selection if deleted file was selected
-        if (selectedCard === filePath) {
+        if (selectedCard === deleteTarget) {
           setSelectedCard(null);
         }
       } else {
@@ -170,8 +174,11 @@ function App() {
     } catch (error) {
       console.error('Error deleting manga:', error);
       alert('削除中にエラーが発生しました');
+    } finally {
+      setDeleteTarget(null);
     }
   };
+
 
   const mangaItems: MangaItem[] = useMemo(
     () =>
@@ -215,9 +222,19 @@ function App() {
           metadata={metadata[metadataTarget]}
           onSave={(data) => handleSaveMetadata(metadataTarget, data)}
           onClose={() => setMetadataTarget(null)}
-          onDelete={() => handleDeleteManga(metadataTarget)}
+          onDelete={() => confirmDelete(metadataTarget)}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={executeDelete}
+        title="マンガを削除"
+        message="本当にこのマンガを削除しますか？&#10;この操作は取り消せませんが、ファイルはゴミ箱に移動されます。"
+        confirmText="削除する"
+        isDangerous={true}
+      />
 
       <div className="h-screen flex flex-col bg-gray-900 text-white font-sans">
         <LibraryControls
