@@ -3,38 +3,64 @@ import { useEffect } from 'react';
 interface UseKeyboardNavProps {
     onNext: () => void;
     onPrev: () => void;
-    onEsc?: () => void;
-    enabled?: boolean;
+    onEsc: () => void;
+    onHome?: () => void;
+    onEnd?: () => void;
+    onToggleFullscreen?: () => void;
+    onSetViewMode?: (mode: 'single' | 'double') => void;
 }
 
-export function useKeyboardNav({ onNext, onPrev, onEsc, enabled = true }: UseKeyboardNavProps) {
+export function useKeyboardNav({
+    onNext,
+    onPrev,
+    onEsc,
+    onHome,
+    onEnd,
+    onToggleFullscreen,
+    onSetViewMode
+}: UseKeyboardNavProps) {
     useEffect(() => {
-        if (!enabled) return;
-
         const handleKeyDown = (e: KeyboardEvent) => {
             switch (e.key) {
                 case 'ArrowRight':
-                case 'd':
-                case 'D':
                     e.preventDefault();
                     onNext();
                     break;
                 case 'ArrowLeft':
-                case 'a':
-                case 'A':
                     e.preventDefault();
                     onPrev();
                     break;
                 case 'Escape':
-                    if (onEsc) {
+                    e.preventDefault();
+                    onEsc();
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    onHome?.();
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    onEnd?.();
+                    break;
+                case 'f':
+                case 'F':
+                    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
                         e.preventDefault();
-                        onEsc();
+                        onToggleFullscreen?.();
                     }
+                    break;
+                case '1':
+                    e.preventDefault();
+                    onSetViewMode?.('single');
+                    break;
+                case '2':
+                    e.preventDefault();
+                    onSetViewMode?.('double');
                     break;
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onNext, onPrev, onEsc, enabled]);
+    }, [onNext, onPrev, onEsc, onHome, onEnd, onToggleFullscreen, onSetViewMode]);
 }

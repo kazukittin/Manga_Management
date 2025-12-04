@@ -23,12 +23,36 @@ function App() {
     setMetadata,
     updateMetadata,
     setLoading,
+    selectedCard,
+    setSelectedCard,
+    addToHistory,
+    readingHistory,
   } = useLibraryStore();
 
   const { loadPreferences } = useReaderStore();
 
   const [currentReader, setCurrentReader] = useState<string | null>(null);
   const [metadataTarget, setMetadataTarget] = useState<string | null>(null);
+
+  const handleOpenReader = async (filePath: string) => {
+    try {
+      const totalPages = await window.api.getImageCount(filePath);
+      const currentPage = await window.api.loadProgress(filePath);
+
+      addToHistory({
+        filePath,
+        lastRead: Date.now(),
+        currentPage,
+        totalPages
+      });
+
+      setCurrentReader(filePath);
+    } catch (error) {
+      console.error('Error opening reader:', error);
+      // Still open reader even if history fails
+      setCurrentReader(filePath);
+    }
+  };
 
   const fileNameFromPath = (filePath: string) => {
     const name = filePath.split(/[\\/]/).pop() || filePath;
@@ -70,8 +94,8 @@ function App() {
       });
       setMetadata(filteredMetadata);
 
-      // Load only the first batch of covers for faster initial display
-      const INITIAL_BATCH_SIZE = 100;
+      // Load only the first visible batch for instant startup  
+      const INITIAL_BATCH_SIZE = 30; // Reduced for faster startup
       const initialBatch = fileList.slice(0, INITIAL_BATCH_SIZE);
       const coverData = await window.api.getCovers(initialBatch);
       setCovers(coverData);
@@ -146,8 +170,8 @@ function App() {
     const filteredPaths = filteredItems.map((item) => item.path);
 
     // Sort
-    return sortFiles(filteredPaths, sortOrder, metadata);
-  }, [mangaItems, searchCriteria, sortOrder]);
+    return sortFiles(filteredPaths, sortOrder, metadata, readingHistory);
+  }, [mangaItems, searchCriteria, sortOrder, metadata, readingHistory]);
 
   return (
     <>
@@ -186,9 +210,11 @@ function App() {
               covers={covers}
               metadata={metadata}
               onItemClick={(filePath: string) => {
-                setCurrentReader(filePath);
+                handleOpenReader(filePath);
               }}
               onEditMetadata={(filePath) => setMetadataTarget(filePath)}
+              selectedCard={selectedCard}
+              onCardSelect={(filePath) => setSelectedCard(filePath)}
               onRangeChanged={async (startIndex: number, endIndex: number) => {
                 // Load covers for the visible range
                 const visibleFiles = displayedFiles.slice(startIndex, endIndex);

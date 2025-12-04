@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { MangaMetadata, MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
 
-export type SortOrder = 'name' | 'natural' | 'date' | 'author' | 'publisher';
+export type SortOrder = 'natural' | 'name' | 'date' | 'author' | 'publisher' | 'recent';
+
+export interface ReadingHistory {
+    filePath: string;
+    lastRead: number;
+    currentPage: number;
+    totalPages: number;
+}
 
 interface LibraryState {
     files: string[];
@@ -11,6 +18,8 @@ interface LibraryState {
     sortOrder: SortOrder;
     searchCriteria: MangaSearchCriteria;
     loading: boolean;
+    selectedCard: string | null;
+    readingHistory: ReadingHistory[];
 
     setFiles: (files: string[]) => void;
     setCovers: (covers: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
@@ -21,6 +30,8 @@ interface LibraryState {
     setSortOrder: (order: SortOrder) => void;
     setSearchCriteria: (criteria: MangaSearchCriteria) => void;
     setLoading: (loading: boolean) => void;
+    setSelectedCard: (path: string | null) => void;
+    addToHistory: (item: ReadingHistory) => void;
     reset: () => void;
 }
 
@@ -34,6 +45,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
     sortOrder: 'natural',
     searchCriteria: freshCriteria(),
     loading: false,
+    selectedCard: null,
+    readingHistory: [],
 
     setFiles: (files) => set({ files }),
     setCovers: (covers) => set((state) => ({
@@ -54,6 +67,13 @@ export const useLibraryStore = create<LibraryState>((set) => ({
     setSortOrder: (sortOrder) => set({ sortOrder }),
     setSearchCriteria: (searchCriteria) => set({ searchCriteria: { ...searchCriteria, tags: [...searchCriteria.tags] } }),
     setLoading: (loading) => set({ loading }),
+    setSelectedCard: (selectedCard) => set({ selectedCard }),
+    addToHistory: (item) => set((state) => {
+        // Remove existing entry for this file
+        const filtered = state.readingHistory.filter(h => h.filePath !== item.filePath);
+        // Add new entry at the beginning
+        return { readingHistory: [item, ...filtered].slice(0, 50) }; // Keep last 50
+    }),
     reset: () => set({
         files: [],
         covers: {},
@@ -62,5 +82,7 @@ export const useLibraryStore = create<LibraryState>((set) => ({
         sortOrder: 'natural',
         searchCriteria: freshCriteria(),
         loading: false,
+        selectedCard: null,
+        readingHistory: [],
     }),
 }));

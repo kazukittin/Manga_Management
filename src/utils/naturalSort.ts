@@ -1,4 +1,5 @@
 import { MangaMetadata } from '../types/manga';
+import { ReadingHistory } from '../store/libraryStore';
 
 export function naturalSort(a: string, b: string): number {
     return a.localeCompare(b, undefined, {
@@ -9,12 +10,25 @@ export function naturalSort(a: string, b: string): number {
 
 export function sortFiles(
     files: string[],
-    order: 'name' | 'natural' | 'date' | 'author' | 'publisher',
-    metadata?: Record<string, MangaMetadata>
+    order: 'name' | 'natural' | 'date' | 'author' | 'publisher' | 'recent',
+    metadata?: Record<string, MangaMetadata>,
+    readingHistory?: ReadingHistory[]
 ): string[] {
     const sorted = [...files];
 
     switch (order) {
+        case 'recent':
+            // Sort by last read time, most recent first
+            return sorted.sort((a, b) => {
+                const historyA = readingHistory?.find(h => h.filePath === a);
+                const historyB = readingHistory?.find(h => h.filePath === b);
+
+                if (!historyA && !historyB) return naturalSort(a, b);
+                if (!historyA) return 1; // b comes first
+                if (!historyB) return -1; // a comes first
+
+                return historyB.lastRead - historyA.lastRead; // Most recent first
+            });
         case 'natural':
             return sorted.sort(naturalSort);
         case 'name':

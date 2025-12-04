@@ -9,6 +9,8 @@ interface CoverGridProps {
     metadata?: Record<string, MangaMetadata>;
     onEditMetadata?: (filePath: string) => void;
     onRangeChanged?: (startIndex: number, endIndex: number) => void;
+    selectedCard?: string | null;
+    onCardSelect?: (filePath: string) => void;
 }
 
 const ITEMS_PER_ROW = 10;
@@ -20,16 +22,22 @@ const CoverItem = memo<{
     metadata: MangaMetadata | undefined;
     onItemClick?: (filePath: string) => void;
     onEditMetadata?: (filePath: string) => void;
-}>(({ filePath, coverUrl, metadata, onItemClick, onEditMetadata }) => {
+    isSelected?: boolean;
+    onSelect?: (filePath: string) => void;
+}>(({ filePath, coverUrl, metadata, onItemClick, onEditMetadata, isSelected, onSelect }) => {
     const fileNameWithExt = filePath.split(/[/\\]/).pop() || filePath;
     const fileName = fileNameWithExt.replace(/\.[^/.]+$/, "");
 
     const handleClick = useCallback(() => {
+        onSelect?.(filePath);
+    }, [filePath, onSelect]);
+
+    const handleDoubleClick = useCallback(() => {
         onItemClick?.(filePath);
     }, [filePath, onItemClick]);
 
-    const handleEdit = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
         onEditMetadata?.(filePath);
     }, [filePath, onEditMetadata]);
 
@@ -37,8 +45,13 @@ const CoverItem = memo<{
         <div
             className="max-w-[180px] cursor-pointer group"
             onClick={handleClick}
+            onDoubleClick={handleDoubleClick}
+            onContextMenu={handleContextMenu}
         >
-            <div className="h-full bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-blue-500 transition-all hover:shadow-lg hover:shadow-blue-500/20">
+            <div className={`h-full bg-gray-800 rounded-lg overflow-hidden border transition-all hover:shadow-lg hover:shadow-blue-500/20 ${isSelected
+                ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900'
+                : 'border-gray-700 hover:border-blue-500'
+                }`}>
                 <div className="h-[220px] bg-gray-900 flex items-center justify-center overflow-hidden">
                     {coverUrl ? (
                         <img
@@ -46,9 +59,10 @@ const CoverItem = memo<{
                             alt={fileName}
                             className="max-w-full max-h-full object-contain"
                             loading="lazy"
+                            decoding="async"
                         />
                     ) : (
-                        <div className="text-gray-600 text-sm">表紙なし</div>
+                        <div className="w-full h-full bg-gray-700 animate-pulse" />
                     )}
                 </div>
                 <div className="p-2 space-y-1">
@@ -61,28 +75,20 @@ const CoverItem = memo<{
                     {metadata?.publisher && (
                         <p className="text-[11px] text-gray-400 truncate">出版社: {metadata.publisher}</p>
                     )}
-                    {metadata?.tags?.length ? (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                            {metadata.tags.map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full"
-                                >
-                                    #{tag}
-                                </span>
-                            ))}
-                        </div>
-                    ) : null}
-                    {onEditMetadata && (
-                        <button
-                            type="button"
-                            className="mt-1 text-[11px] text-blue-400 hover:text-blue-300"
-                            onClick={handleEdit}
-                        >
-                            情報を編集
-                        </button>
-                    )}
                 </div>
+                {/* Tags moved to bottom */}
+                {metadata?.tags?.length ? (
+                    <div className="px-2 pb-2 flex flex-wrap gap-1">
+                        {metadata.tags.map((tag) => (
+                            <span
+                                key={tag}
+                                className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full"
+                            >
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                ) : null}
             </div>
         </div>
     );
@@ -90,7 +96,16 @@ const CoverItem = memo<{
 
 CoverItem.displayName = 'CoverItem';
 
-const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metadata = {}, onEditMetadata, onRangeChanged }) => {
+const CoverGrid: React.FC<CoverGridProps> = ({
+    files,
+    covers,
+    onItemClick,
+    metadata = {},
+    onEditMetadata,
+    onRangeChanged,
+    selectedCard,
+    onCardSelect
+}) => {
     // Group files into rows
     const rows: string[][] = [];
     for (let i = 0; i < files.length; i += ITEMS_PER_ROW) {
@@ -110,6 +125,8 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
                         metadata={metadata[filePath]}
                         onItemClick={onItemClick}
                         onEditMetadata={onEditMetadata}
+                        isSelected={selectedCard === filePath}
+                        onSelect={onCardSelect}
                     />
                 ))}
             </div>
@@ -136,10 +153,11 @@ const CoverGrid: React.FC<CoverGridProps> = ({ files, covers, onItemClick, metad
     return (
         <div className="flex-1 h-full w-full">
             <Virtuoso
+                style={{ height: '100%' }}
                 totalCount={rows.length}
                 itemContent={renderRow}
-                style={{ height: '100%' }}
-                overscan={200}
+                overscan={50}
+                increaseViewportBy={{ top: 200, bottom: 200 }}
                 rangeChanged={handleRangeChanged}
             />
         </div>

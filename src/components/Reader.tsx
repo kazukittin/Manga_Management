@@ -149,7 +149,31 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
         setCurrentPage(prev);
     };
 
-    useKeyboardNav({ onNext: handleNext, onPrev: handlePrev, onEsc: onClose });
+    const handleHome = () => {
+        setCurrentPage(0);
+    };
+
+    const handleEnd = () => {
+        setCurrentPage(totalPages - 1);
+    };
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    useKeyboardNav({
+        onNext: handleNext,
+        onPrev: handlePrev,
+        onEsc: onClose,
+        onHome: handleHome,
+        onEnd: handleEnd,
+        onToggleFullscreen: toggleFullscreen,
+        onSetViewMode: setViewMode
+    });
 
     // Click zone navigation
     const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {

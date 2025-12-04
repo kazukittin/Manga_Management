@@ -56,6 +56,7 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                         onChange={(e) => setSortOrder(e.target.value as SortOrder)}
                         className="bg-gray-700 text-white px-3 py-1.5 rounded text-sm border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
+                        <option value="recent">最近読んだ順</option>
                         <option value="natural">自然順</option>
                         <option value="name">名前 (A-Z)</option>
                         <option value="date">更新日</option>
