@@ -4,12 +4,13 @@ import LibraryControls from './components/LibraryControls';
 import Reader from './components/Reader';
 import MetadataModal from './components/MetadataModal';
 import ConfirmationModal from './components/ConfirmationModal';
+import { ToastProvider, useToast } from './components/Toast';
 import { useLibraryStore } from './store/libraryStore';
 import { useReaderStore } from './store/readerStore';
 import { sortFiles } from './utils/naturalSort';
 import { MangaItem, MangaMetadata, filterMangaByCriteria } from './types/manga';
 
-function App() {
+function AppContent() {
   const {
     files,
     covers,
@@ -31,6 +32,7 @@ function App() {
   } = useLibraryStore();
 
   const { loadPreferences } = useReaderStore();
+  const { showToast } = useToast();
 
   const [currentReader, setCurrentReader] = useState<string | null>(null);
   const [metadataTarget, setMetadataTarget] = useState<string | null>(null);
@@ -103,6 +105,7 @@ function App() {
       setCovers(coverData);
     } catch (error) {
       console.error('Error loading library:', error);
+      showToast('ライブラリの読み込みに失敗しました', 'error');
     } finally {
       setLoading(false);
     }
@@ -141,8 +144,10 @@ function App() {
 
       updateMetadata(filePath, payload);
       await window.api.saveMetadata(filePath, payload);
+      showToast('情報を保存しました', 'success');
     } catch (error) {
       console.error('Failed to save metadata', error);
+      showToast('保存に失敗しました', 'error');
     } finally {
       setMetadataTarget(null);
     }
@@ -165,15 +170,25 @@ function App() {
         setMetadataTarget(null);
 
         // Clear selection if deleted file was selected
+        // Clear selection if deleted file was selected
         if (selectedCard === deleteTarget) {
           setSelectedCard(null);
         }
+
+        showToast('削除しました', 'success');
+
+        // Re-scan library to ensure consistency
+        if (currentPath) {
+          // Don't await this to keep UI responsive, but it will update the list eventually
+          loadLibrary(currentPath, false);
+        }
+
       } else {
-        alert(`削除に失敗しました: ${result.error}`);
+        showToast(`削除に失敗しました: ${result.error}`, 'error');
       }
     } catch (error) {
       console.error('Error deleting manga:', error);
-      alert('削除中にエラーが発生しました');
+      showToast('削除中にエラーが発生しました', 'error');
     } finally {
       setDeleteTarget(null);
     }
@@ -182,7 +197,7 @@ function App() {
 
   const mangaItems: MangaItem[] = useMemo(
     () =>
-      files.map((path) => {
+      files.map((path: string) => {
         const existing = metadata[path];
         const title = existing?.title || fileNameFromPath(path);
         return {
@@ -206,6 +221,22 @@ function App() {
     // Sort
     return sortFiles(filteredPaths, sortOrder, metadata, readingHistory);
   }, [mangaItems, searchCriteria, sortOrder, metadata, readingHistory]);
+
+  // Fix: Load covers when displayedFiles changes (e.g. filtering)
+  useEffect(() => {
+    if (displayedFiles.length > 0) {
+      const INITIAL_BATCH_SIZE = 30;
+      const initialBatch = displayedFiles.slice(0, INITIAL_BATCH_SIZE);
+      // Check which ones are missing covers
+      const missingCovers = initialBatch.filter((path: string) => !covers[path]);
+
+      if (missingCovers.length > 0) {
+        window.api.getCovers(missingCovers).then((newCovers: Record<string, string>) => {
+          setCovers((prev: Record<string, string>) => ({ ...prev, ...newCovers }));
+        }).catch(console.error);
+      }
+    }
+  }, [displayedFiles, covers, setCovers]);
 
   return (
     <>
@@ -303,6 +334,14 @@ function App() {
         </footer>
       </div>
     </>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

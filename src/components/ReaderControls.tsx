@@ -9,6 +9,7 @@ interface ReaderControlsProps {
     onViewModeChange: (mode: ViewMode) => void;
     onReadingDirectionChange: (direction: 'ltr' | 'rtl') => void;
     onClose: () => void;
+    onGoToFirstPage: () => void;
     visible: boolean;
 }
 
@@ -20,6 +21,7 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
     onViewModeChange,
     onReadingDirectionChange,
     onClose,
+    onGoToFirstPage,
     visible,
 }) => {
     return (
@@ -44,6 +46,16 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
                     </span>
 
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={onGoToFirstPage}
+                            className="px-3 py-1.5 rounded text-xs font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors flex items-center gap-1"
+                            title="最初に戻る"
+                        >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                            </svg>
+                            最初へ
+                        </button>
                         <button
                             onClick={() => onViewModeChange(viewMode === 'single' ? 'double' : 'single')}
                             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${viewMode === 'single'

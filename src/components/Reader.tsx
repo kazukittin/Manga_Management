@@ -232,6 +232,7 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
                 onViewModeChange={setViewMode}
                 onReadingDirectionChange={setReadingDirection}
                 onClose={onClose}
+                onGoToFirstPage={handleHome}
                 visible={showControls}
             />
 
