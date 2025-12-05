@@ -110,14 +110,24 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('library:deleteManga', async (_, filePath: string) => {
-    try {
-      // Use shell.trashItem to move to trash instead of permanent delete for safety
-      await shell.trashItem(filePath);
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to delete file:', error);
-      return { success: false, error: String(error) };
+    const maxRetries = 3;
+    let lastError;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        // Use shell.trashItem to move to trash instead of permanent delete for safety
+        await shell.trashItem(filePath);
+        return { success: true };
+      } catch (error) {
+        lastError = error;
+        console.warn(`Delete attempt ${i + 1} failed:`, error);
+        // Wait increasing amount of time before retry
+        await new Promise(resolve => setTimeout(resolve, 200 * (i + 1)));
+      }
     }
+
+    console.error('Failed to delete file after retries:', lastError);
+    return { success: false, error: String(lastError) };
   });
 
   ipcMain.handle('library:getSavedRoot', async () => {

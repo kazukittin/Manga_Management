@@ -47,7 +47,7 @@ export async function extractCoverImage(archivePath: string): Promise<string | n
 
 export async function extractCoversForFiles(filePaths: string[]): Promise<Record<string, string>> {
     const covers: Record<string, string> = {};
-    const BATCH_SIZE = 50; // Process 50 files at a time to avoid overwhelming the system
+    const BATCH_SIZE = 10; // Process 10 files at a time to avoid overwhelming the system and file locks
 
     // Process files in batches with parallel execution within each batch
     for (let i = 0; i < filePaths.length; i += BATCH_SIZE) {

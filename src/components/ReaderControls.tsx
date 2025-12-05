@@ -47,7 +47,10 @@ const ReaderControls: React.FC<ReaderControlsProps> = ({
 
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={onGoToFirstPage}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onGoToFirstPage();
+                            }}
                             className="px-3 py-1.5 rounded text-xs font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors flex items-center gap-1"
                             title="最初に戻る"
                         >
