@@ -13,7 +13,7 @@ interface CoverGridProps {
     onCardSelect?: (filePath: string) => void;
 }
 
-const ITEMS_PER_ROW = 10;
+const ITEMS_PER_ROW = 8;
 
 // Memoized individual cover item to prevent unnecessary re-renders
 const CoverItem = memo<{
@@ -43,50 +43,67 @@ const CoverItem = memo<{
 
     return (
         <div
-            className="max-w-[180px] cursor-pointer group"
+            className="w-full cursor-pointer group"
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
             onContextMenu={handleContextMenu}
         >
-            <div className={`h-full bg-gray-800 rounded-lg overflow-hidden border transition-all hover:shadow-lg hover:shadow-blue-500/20 ${isSelected
-                ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900'
-                : 'border-gray-700 hover:border-blue-500'
+            <div className={`h-full bg-slate-900/40 backdrop-blur-sm rounded-xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 ${isSelected
+                ? 'border-blue-500 ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950'
+                : 'border-white/5 hover:border-blue-400/50'
                 }`}>
-                <div className="h-[220px] bg-gray-900 flex items-center justify-center overflow-hidden">
+                <div className="aspect-[2/3] bg-slate-800/50 flex items-center justify-center overflow-hidden relative">
                     {coverUrl ? (
-                        <img
-                            src={coverUrl}
-                            alt={fileName}
-                            className="max-w-full max-h-full object-contain"
-                            loading="lazy"
-                            decoding="async"
-                        />
+                        <>
+                            <img
+                                src={coverUrl}
+                                alt={fileName}
+                                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                                loading="lazy"
+                                decoding="async"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </>
                     ) : (
-                        <div className="w-full h-full bg-gray-700 animate-pulse" />
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-600 gap-2">
+                            <svg className="w-10 h-10 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-xs opacity-50">No Cover</span>
+                        </div>
                     )}
                 </div>
-                <div className="p-2 space-y-1">
-                    <p className="text-xs text-gray-300 truncate group-hover:text-blue-400 transition-colors" title={fileNameWithExt}>
+                <div className="p-3 space-y-1">
+                    <p className="text-sm font-medium text-slate-200 truncate group-hover:text-blue-400 transition-colors" title={fileNameWithExt}>
                         {fileName}
                     </p>
                     {metadata?.author && (
-                        <p className="text-[11px] text-gray-400 truncate">作者: {metadata.author}</p>
+                        <p className="text-xs text-slate-400 truncate">
+                            <span className="opacity-50 mr-1">著者:</span>
+                            {metadata.author}
+                        </p>
                     )}
                     {metadata?.publisher && (
-                        <p className="text-[11px] text-gray-400 truncate">出版社: {metadata.publisher}</p>
+                        <p className="text-xs text-slate-400 truncate">
+                            <span className="opacity-50 mr-1">サークル:</span>
+                            {metadata.publisher}
+                        </p>
                     )}
                 </div>
-                {/* Tags moved to bottom */}
+                {/* Tags */}
                 {metadata?.tags?.length ? (
-                    <div className="px-2 pb-2 flex flex-wrap gap-1">
-                        {metadata.tags.map((tag) => (
+                    <div className="px-3 pb-3 flex flex-wrap gap-1">
+                        {metadata.tags.slice(0, 3).map((tag) => (
                             <span
                                 key={tag}
-                                className="text-[10px] bg-gray-700 text-gray-200 px-2 py-0.5 rounded-full"
+                                className="text-[10px] bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/10"
                             >
                                 #{tag}
                             </span>
                         ))}
+                        {metadata.tags.length > 3 && (
+                            <span className="text-[10px] text-slate-500 px-1">+{metadata.tags.length - 3}</span>
+                        )}
                     </div>
                 ) : null}
             </div>
@@ -116,7 +133,7 @@ const CoverGrid: React.FC<CoverGridProps> = ({
         const items = rows[index];
 
         return (
-            <div className="grid grid-cols-10 gap-4 px-4 mb-4">
+            <div className="grid grid-cols-8 gap-6 px-6 mb-6">
                 {items.map((filePath) => (
                     <CoverItem
                         key={filePath}

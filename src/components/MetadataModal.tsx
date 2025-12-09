@@ -73,7 +73,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
 
                     <div>
                         <label className="block text-sm text-gray-300 mb-1" htmlFor="publisher">
-                            出版社
+                            サークル
                         </label>
                         <input
                             id="publisher"

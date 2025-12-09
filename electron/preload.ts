@@ -35,4 +35,5 @@ contextBridge.exposeInMainWorld('api', {
   loadMetadata: () => ipcRenderer.invoke('metadata:load'),
   saveMetadata: (filePath: string, metadata: { title?: string; author?: string; publisher?: string; tags: string[] }) =>
     ipcRenderer.invoke('metadata:update', filePath, metadata),
+  deleteManga: (filePath: string) => ipcRenderer.invoke('library:deleteManga', filePath),
 })
