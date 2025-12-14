@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const EXTENSIONS = ['.zip', '.cbz', '.jpg', '.png', '.webp', '.avif'];
+const EXTENSIONS = ['.zip', '.cbz', '.jpg', '.png', '.webp', '.avif', '.pdf', '.epub'];
 
 export async function scanDirectory(dirPath: string): Promise<string[]> {
     try {

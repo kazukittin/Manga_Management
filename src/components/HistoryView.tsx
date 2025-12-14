@@ -36,7 +36,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ onItemClick }) => {
                 </div>
                 <div className="text-center">
                     <h3 className="text-lg font-medium text-slate-300">履歴がありません</h3>
-                    <p className="text-sm">マンガを読むとここに表示されます。</p>
+                    <p className="text-sm">作品を読むとここに表示されます。</p>
                 </div>
             </div>
         );

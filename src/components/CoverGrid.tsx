@@ -1,12 +1,12 @@
 import React, { memo, useCallback } from 'react';
 import { Virtuoso } from 'react-virtuoso';
-import { MangaMetadata } from '../types/manga';
+import { BookMetadata } from '../types/book';
 
 interface CoverGridProps {
     files: string[];
     covers: Record<string, string>;
     onItemClick?: (filePath: string) => void;
-    metadata?: Record<string, MangaMetadata>;
+    metadata?: Record<string, BookMetadata>;
     onEditMetadata?: (filePath: string) => void;
     onRangeChanged?: (startIndex: number, endIndex: number) => void;
     selectedCard?: string | null;
@@ -19,7 +19,7 @@ const ITEMS_PER_ROW = 8;
 const CoverItem = memo<{
     filePath: string;
     coverUrl: string | undefined;
-    metadata: MangaMetadata | undefined;
+    metadata: BookMetadata | undefined;
     onItemClick?: (filePath: string) => void;
     onEditMetadata?: (filePath: string) => void;
     isSelected?: boolean;
@@ -85,7 +85,7 @@ const CoverItem = memo<{
                     )}
                     {metadata?.publisher && (
                         <p className="text-xs text-slate-400 truncate">
-                            <span className="opacity-50 mr-1">サークル:</span>
+                            <span className="opacity-50 mr-1">出版社:</span>
                             {metadata.publisher}
                         </p>
                     )}
@@ -93,7 +93,7 @@ const CoverItem = memo<{
                 {/* Tags */}
                 {metadata?.tags?.length ? (
                     <div className="px-3 pb-3 flex flex-wrap gap-1">
-                        {metadata.tags.slice(0, 3).map((tag) => (
+                        {metadata.tags.slice(0, 3).map((tag: string) => (
                             <span
                                 key={tag}
                                 className="text-[10px] bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/10"

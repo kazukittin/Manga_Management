@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import TagInput from './TagInput';
 import { useLibraryStore, SortOrder } from '../store/libraryStore';
-import { MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
+import { BookSearchCriteria, BookCategory, CATEGORY_OPTIONS, defaultSearchCriteria } from '../types/book';
 import { useMetadataOptions } from '../hooks/useMetadataOptions';
 import './LibraryControls.css';
 
@@ -14,14 +14,14 @@ interface LibraryControlsProps {
 const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading, hasFolder }) => {
     const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
     const { authors, publishers, tags } = useMetadataOptions();
-    const [form, setForm] = useState<MangaSearchCriteria>(searchCriteria);
+    const [form, setForm] = useState<BookSearchCriteria>(searchCriteria);
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
         setForm(searchCriteria);
     }, [searchCriteria]);
 
-    const updateCriteria = (updater: (prev: MangaSearchCriteria) => MangaSearchCriteria) => {
+    const updateCriteria = (updater: (prev: BookSearchCriteria) => BookSearchCriteria) => {
         setForm((prev) => {
             const next = updater(prev);
             setSearchCriteria({ ...next, tags: [...next.tags] });
@@ -29,11 +29,15 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
         });
     };
 
-    const handleInputChange = (key: keyof MangaSearchCriteria, value: string) => {
+    const handleInputChange = (key: keyof BookSearchCriteria, value: string) => {
         updateCriteria((prev) => ({ ...prev, [key]: value }));
     };
 
-    const handleModeChange = (mode: MangaSearchCriteria['mode']) => {
+    const handleCategoryChange = (category: BookCategory | undefined) => {
+        updateCriteria((prev) => ({ ...prev, category }));
+    };
+
+    const handleModeChange = (mode: BookSearchCriteria['mode']) => {
         updateCriteria((prev) => ({ ...prev, mode }));
     };
 
@@ -77,7 +81,7 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                                 <option value="name">名前 (A-Z)</option>
                                 <option value="date">更新日</option>
                                 <option value="author">作者順</option>
-                                <option value="publisher">サークル順</option>
+                                <option value="publisher">出版社順</option>
                             </select>
                         </div>
                     </div>
@@ -121,7 +125,22 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                         }`}
                 >
                     <div className="min-h-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Category Filter */}
+                            <div className="space-y-3">
+                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">カテゴリ</label>
+                                <select
+                                    value={form.category ?? ''}
+                                    onChange={(e) => handleCategoryChange(e.target.value as BookCategory || undefined)}
+                                    className="block w-full px-3 py-2 bg-slate-800 border border-white/5 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [&>option]:bg-slate-800 [&>option]:text-white"
+                                >
+                                    <option value="">全てのカテゴリ</option>
+                                    {CATEGORY_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {/* Metadata Filters */}
                             <div className="space-y-3">
                                 <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">フィルター</label>
@@ -141,7 +160,7 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
                                         onChange={(e) => handleInputChange('publisher', e.target.value)}
                                         className="block w-full px-3 py-2 bg-slate-800 border border-white/5 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [&>option]:bg-slate-800 [&>option]:text-white"
                                     >
-                                        <option value="">全てのサークル</option>
+                                        <option value="">全ての出版社</option>
                                         {publishers.map((publisher) => (
                                             <option key={publisher} value={publisher}>{publisher}</option>
                                         ))}

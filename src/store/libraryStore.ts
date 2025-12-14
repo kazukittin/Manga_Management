@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { MangaMetadata, MangaSearchCriteria, defaultSearchCriteria } from '../types/manga';
+import { BookMetadata, BookSearchCriteria, defaultSearchCriteria } from '../types/book';
 
 export type SortOrder = 'natural' | 'name' | 'date' | 'author' | 'publisher' | 'recent';
 
@@ -14,9 +14,9 @@ interface LibraryState {
     files: string[];
     covers: Record<string, string>;
     currentPath: string;
-    metadata: Record<string, MangaMetadata>;
+    metadata: Record<string, BookMetadata>;
     sortOrder: SortOrder;
-    searchCriteria: MangaSearchCriteria;
+    searchCriteria: BookSearchCriteria;
     loading: boolean;
     selectedCard: string | null;
     readingHistory: ReadingHistory[];
@@ -25,10 +25,10 @@ interface LibraryState {
     setCovers: (covers: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void;
     addCovers: (newCovers: Record<string, string>) => void;
     setCurrentPath: (path: string) => void;
-    setMetadata: (metadata: Record<string, MangaMetadata>) => void;
-    updateMetadata: (path: string, metadata: MangaMetadata) => void;
+    setMetadata: (metadata: Record<string, BookMetadata>) => void;
+    updateMetadata: (path: string, metadata: BookMetadata) => void;
     setSortOrder: (order: SortOrder) => void;
-    setSearchCriteria: (criteria: MangaSearchCriteria) => void;
+    setSearchCriteria: (criteria: BookSearchCriteria) => void;
     setLoading: (loading: boolean) => void;
     setSelectedCard: (path: string | null) => void;
     addToHistory: (item: ReadingHistory) => void;

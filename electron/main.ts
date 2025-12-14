@@ -7,10 +7,13 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import fs from 'node:fs'
 
-type MangaMetadata = {
+type BookCategory = 'manga' | 'novel' | 'reference' | 'other';
+
+type BookMetadata = {
   title?: string
   author?: string
   publisher?: string
+  category?: BookCategory
   tags: string[]
 }
 
@@ -144,11 +147,11 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('metadata:load', async () => {
-    return store.get('metadata', {}) as Record<string, MangaMetadata>
+    return store.get('metadata', {}) as Record<string, BookMetadata>
   })
 
-  ipcMain.handle('metadata:update', async (_event, filePath: string, metadata: MangaMetadata) => {
-    const currentMetadata = store.get('metadata', {}) as Record<string, MangaMetadata>
+  ipcMain.handle('metadata:update', async (_event, filePath: string, metadata: BookMetadata) => {
+    const currentMetadata = store.get('metadata', {}) as Record<string, BookMetadata>
     currentMetadata[filePath] = {
       ...metadata,
       title: metadata.title,

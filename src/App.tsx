@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import CoverGrid from './components/CoverGrid';
 import LibraryControls from './components/LibraryControls';
 import Reader from './components/Reader';
+import PdfReader from './components/PdfReader';
+import EpubReader from './components/EpubReader';
+import { getFileType } from './utils/fileTypeUtils';
 import MetadataModal from './components/MetadataModal';
 import ConfirmationModal from './components/ConfirmationModal';
 import { ToastProvider, useToast } from './components/Toast';
 import { useLibraryStore } from './store/libraryStore';
 import { useReaderStore } from './store/readerStore';
 import { sortFiles } from './utils/naturalSort';
-import { MangaItem, MangaMetadata, filterMangaByCriteria } from './types/manga';
+import { BookItem, BookMetadata, filterBooksByCriteria } from './types/book';
 
 import Layout from './components/Layout';
 import { ViewMode } from './components/Sidebar';
@@ -83,13 +86,13 @@ function AppContent() {
 
       const [fileList, storedMetadata] = await Promise.all([
         window.api.scanLibrary(path),
-        window.api.loadMetadata(),
+        window.api.loadMetadata() as Promise<Record<string, BookMetadata>>,
       ]);
 
       setFiles(fileList);
 
       // Filter metadata to the files that exist in the current library and ensure defaults
-      const filteredMetadata: Record<string, MangaMetadata> = {};
+      const filteredMetadata: Record<string, BookMetadata> = {};
       fileList.forEach((filePath) => {
         const fileNameWithExt = filePath.split(/[\\/]/).pop() || filePath;
         const fileName = fileNameWithExt.replace(/\.[^/.]+$/, "");
@@ -98,6 +101,7 @@ function AppContent() {
           title: entry?.title ?? fileName,
           author: entry?.author,
           publisher: entry?.publisher,
+          category: entry?.category,
           tags: entry?.tags ?? [],
         };
       });
@@ -138,10 +142,10 @@ function AppContent() {
     loadSavedLibrary();
   }, []);
 
-  const handleSaveMetadata = async (filePath: string, data: Partial<MangaMetadata>) => {
+  const handleSaveMetadata = async (filePath: string, data: Partial<BookMetadata>) => {
     try {
       const title = data.title?.trim() || metadata[filePath]?.title || fileNameFromPath(filePath);
-      const payload: MangaMetadata = {
+      const payload: BookMetadata = {
         ...data,
         title,
         tags: data.tags ?? [],
@@ -199,7 +203,7 @@ function AppContent() {
   };
 
 
-  const mangaItems: MangaItem[] = useMemo(
+  const bookItems: BookItem[] = useMemo(
     () =>
       files.map((path: string) => {
         const existing = metadata[path];
@@ -210,6 +214,7 @@ function AppContent() {
             title,
             author: existing?.author,
             publisher: existing?.publisher,
+            category: existing?.category,
             tags: existing?.tags ?? [],
           },
         };
@@ -219,12 +224,12 @@ function AppContent() {
 
   // Apply sorting and filtering
   const displayedFiles = useMemo(() => {
-    const filteredItems = filterMangaByCriteria(mangaItems, searchCriteria);
+    const filteredItems = filterBooksByCriteria(bookItems, searchCriteria);
     const filteredPaths = filteredItems.map((item) => item.path);
 
     // Sort
     return sortFiles(filteredPaths, sortOrder, metadata, readingHistory);
-  }, [mangaItems, searchCriteria, sortOrder, metadata, readingHistory]);
+  }, [bookItems, searchCriteria, sortOrder, metadata, readingHistory]);
 
   // Fix: Load covers when displayedFiles changes (e.g. filtering)
   useEffect(() => {
@@ -244,12 +249,17 @@ function AppContent() {
 
   return (
     <>
-      {currentReader && (
-        <Reader
-          archivePath={currentReader}
-          onClose={() => setCurrentReader(null)}
-        />
-      )}
+      {currentReader && (() => {
+        const fileType = getFileType(currentReader);
+        switch (fileType) {
+          case 'pdf':
+            return <PdfReader filePath={currentReader} onClose={() => setCurrentReader(null)} />;
+          case 'epub':
+            return <EpubReader filePath={currentReader} onClose={() => setCurrentReader(null)} />;
+          default:
+            return <Reader archivePath={currentReader} onClose={() => setCurrentReader(null)} />;
+        }
+      })()}
 
       {metadataTarget && (
         <MetadataModal
@@ -265,8 +275,8 @@ function AppContent() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={executeDelete}
-        title="マンガを削除"
-        message="本当にこのマンガを削除しますか？&#10;この操作は取り消せませんが、ファイルはゴミ箱に移動されます。"
+        title="作品を削除"
+        message="本当にこの作品を削除しますか？&#10;この操作は取り消せませんが、ファイルはゴミ箱に移動されます。"
         confirmText="削除する"
         isDangerous={true}
       />
@@ -326,7 +336,7 @@ function AppContent() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                     <p className="text-lg mb-2">ファイルが読み込まれていません</p>
-                    <p className="text-sm">「フォルダーを開く」をクリックしてマンガを読み込みます。</p>
+                    <p className="text-sm">「フォルダーを開く」をクリックして作品を読み込みます。</p>
                   </div>
                   <button
                     onClick={handleOpenFolder}

@@ -1,21 +1,32 @@
 export type SearchMode = 'AND' | 'OR';
 
-export interface MangaMetadata {
+export type BookCategory = 'manga' | 'novel' | 'reference' | 'other';
+
+export const CATEGORY_OPTIONS: { value: BookCategory; label: string }[] = [
+    { value: 'manga', label: 'マンガ' },
+    { value: 'novel', label: '小説' },
+    { value: 'reference', label: '参考書' },
+    { value: 'other', label: 'その他' },
+];
+
+export interface BookMetadata {
     title: string;
     author?: string;
     publisher?: string;
+    category?: BookCategory;
     tags: string[];
 }
 
-export interface MangaItem {
+export interface BookItem {
     path: string;
-    metadata: MangaMetadata;
+    metadata: BookMetadata;
 }
 
-export interface MangaSearchCriteria {
+export interface BookSearchCriteria {
     title?: string;
     author?: string;
     publisher?: string;
+    category?: BookCategory;
     tags: string[];
     mode: SearchMode;
 }
@@ -24,10 +35,11 @@ const normalizeText = (value?: string) => value?.trim().toLowerCase() ?? '';
 
 const normalizeTags = (tags: string[]) => tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean);
 
-export function filterMangaByCriteria(mangaList: MangaItem[], criteria: MangaSearchCriteria): MangaItem[] {
+export function filterBooksByCriteria(bookList: BookItem[], criteria: BookSearchCriteria): BookItem[] {
     const hasTitle = Boolean(criteria.title?.trim());
     const hasAuthor = Boolean(criteria.author?.trim());
     const hasPublisher = Boolean(criteria.publisher?.trim());
+    const hasCategory = Boolean(criteria.category);
     const hasTags = criteria.tags.length > 0;
 
     const normalizedTitle = normalizeText(criteria.title);
@@ -35,9 +47,9 @@ export function filterMangaByCriteria(mangaList: MangaItem[], criteria: MangaSea
     const normalizedPublisher = normalizeText(criteria.publisher);
     const normalizedSearchTags = normalizeTags(criteria.tags);
 
-    const noCriteria = !hasTitle && !hasAuthor && !hasPublisher && !hasTags;
+    const noCriteria = !hasTitle && !hasAuthor && !hasPublisher && !hasCategory && !hasTags;
 
-    return mangaList.filter(({ metadata }) => {
+    return bookList.filter(({ metadata }) => {
         const matchesTitle = hasTitle
             ? normalizeText(metadata.title).includes(normalizedTitle)
             : true;
@@ -47,12 +59,15 @@ export function filterMangaByCriteria(mangaList: MangaItem[], criteria: MangaSea
         const matchesPublisher = hasPublisher
             ? normalizeText(metadata.publisher).includes(normalizedPublisher)
             : true;
+        const matchesCategory = hasCategory
+            ? metadata.category === criteria.category
+            : true;
         const matchesTags = hasTags
             ? normalizedSearchTags.every((tag) => normalizeTags(metadata.tags).includes(tag))
             : true;
 
         if (criteria.mode === 'AND') {
-            return matchesTitle && matchesAuthor && matchesPublisher && matchesTags;
+            return matchesTitle && matchesAuthor && matchesPublisher && matchesCategory && matchesTags;
         }
 
         // OR search
@@ -66,15 +81,17 @@ export function filterMangaByCriteria(mangaList: MangaItem[], criteria: MangaSea
             (hasTitle && matchesTitle) ||
             (hasAuthor && matchesAuthor) ||
             (hasPublisher && matchesPublisher) ||
+            (hasCategory && matchesCategory) ||
             (hasTags && tagAnyMatch)
         );
     });
 }
 
-export const defaultSearchCriteria: MangaSearchCriteria = {
+export const defaultSearchCriteria: BookSearchCriteria = {
     title: '',
     author: '',
     publisher: '',
+    category: undefined,
     tags: [],
     mode: 'AND',
 };

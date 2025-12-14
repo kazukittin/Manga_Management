@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import TagInput from './TagInput';
-import { MangaMetadata } from '../types/manga';
+import { BookMetadata, BookCategory, CATEGORY_OPTIONS } from '../types/book';
 import { useMetadataOptions } from '../hooks/useMetadataOptions';
 
-type MetadataFormValue = Partial<MangaMetadata>;
+type MetadataFormValue = Partial<BookMetadata>;
 
 interface MetadataModalProps {
     filePath: string;
-    metadata?: MangaMetadata;
+    metadata?: BookMetadata;
     onSave: (metadata: MetadataFormValue) => void;
     onClose: () => void;
     onDelete?: () => void;
@@ -17,6 +17,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
     const { authors, publishers, tags: availableTags } = useMetadataOptions();
     const [author, setAuthor] = useState<string>(metadata?.author ?? '');
     const [publisher, setPublisher] = useState<string>(metadata?.publisher ?? '');
+    const [category, setCategory] = useState<BookCategory | undefined>(metadata?.category);
     const [tags, setTags] = useState<string[]>(metadata?.tags ?? []);
 
     const fileName = useMemo(() => {
@@ -29,6 +30,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
         onSave({
             author: author.trim() || undefined,
             publisher: publisher.trim() || undefined,
+            category,
             tags,
         });
     };
@@ -52,6 +54,23 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
 
                 <form onSubmit={handleSubmit} className="p-4 space-y-4">
                     <div>
+                        <label className="block text-sm text-gray-300 mb-1" htmlFor="category">
+                            カテゴリ
+                        </label>
+                        <select
+                            id="category"
+                            value={category ?? ''}
+                            onChange={(e) => setCategory(e.target.value as BookCategory || undefined)}
+                            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">未分類</option>
+                            {CATEGORY_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
                         <label className="block text-sm text-gray-300 mb-1" htmlFor="author">
                             作者
                         </label>
@@ -73,7 +92,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
 
                     <div>
                         <label className="block text-sm text-gray-300 mb-1" htmlFor="publisher">
-                            サークル
+                            出版社
                         </label>
                         <input
                             id="publisher"
@@ -100,7 +119,7 @@ const MetadataModal: React.FC<MetadataModalProps> = ({ filePath, metadata, onSav
                                 onClick={onDelete}
                                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors text-sm"
                             >
-                                マンガを削除
+                                作品を削除
                             </button>
                         )}
                         <div className="flex gap-2 ml-auto">

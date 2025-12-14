@@ -1,4 +1,4 @@
-import { MangaMetadata } from '../types/manga';
+import { BookMetadata } from '../types/book';
 import { ReadingHistory } from '../store/libraryStore';
 
 export function naturalSort(a: string, b: string): number {
@@ -11,7 +11,7 @@ export function naturalSort(a: string, b: string): number {
 export function sortFiles(
     files: string[],
     order: 'name' | 'natural' | 'date' | 'author' | 'publisher' | 'recent',
-    metadata?: Record<string, MangaMetadata>,
+    metadata?: Record<string, BookMetadata>,
     readingHistory?: ReadingHistory[]
 ): string[] {
     const sorted = [...files];
