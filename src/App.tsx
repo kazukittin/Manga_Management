@@ -11,7 +11,8 @@ import { ToastProvider, useToast } from './components/Toast';
 import { useLibraryStore } from './store/libraryStore';
 import { useReaderStore } from './store/readerStore';
 import { sortFiles } from './utils/naturalSort';
-import { BookItem, BookMetadata, filterBooksByCriteria } from './types/book';
+import { BookItem, BookMetadata, BookCategory, filterBooksByCriteria } from './types/book';
+import { getDefaultReadingDirection } from './utils/contentDefaults';
 
 import Layout from './components/Layout';
 import { ViewMode } from './components/Sidebar';
@@ -25,6 +26,7 @@ function AppContent() {
     metadata,
     sortOrder,
     searchCriteria,
+    setSearchCriteria,
     loading,
     setFiles,
     setCovers,
@@ -222,6 +224,24 @@ function AppContent() {
     [files, metadata]
   );
 
+  // Compute category statistics
+  const categoryStats = useMemo(() => {
+    const stats = { manga: 0, novel: 0, reference: 0, other: 0, uncategorized: 0 };
+    Object.values(metadata).forEach((m) => {
+      if (m.category) {
+        stats[m.category]++;
+      } else {
+        stats.uncategorized++;
+      }
+    });
+    return stats;
+  }, [metadata]);
+
+  // Handle category selection from sidebar
+  const handleCategorySelect = (category: BookCategory | undefined) => {
+    setSearchCriteria({ ...searchCriteria, category });
+  };
+
   // Apply sorting and filtering
   const displayedFiles = useMemo(() => {
     const filteredItems = filterBooksByCriteria(bookItems, searchCriteria);
@@ -251,13 +271,15 @@ function AppContent() {
     <>
       {currentReader && (() => {
         const fileType = getFileType(currentReader);
+        const bookCategory = metadata[currentReader]?.category;
+        const defaultDirection = getDefaultReadingDirection(bookCategory);
         switch (fileType) {
           case 'pdf':
-            return <PdfReader filePath={currentReader} onClose={() => setCurrentReader(null)} />;
+            return <PdfReader filePath={currentReader} onClose={() => setCurrentReader(null)} defaultDirection={defaultDirection} />;
           case 'epub':
-            return <EpubReader filePath={currentReader} onClose={() => setCurrentReader(null)} />;
+            return <EpubReader filePath={currentReader} onClose={() => setCurrentReader(null)} defaultDirection={defaultDirection} />;
           default:
-            return <Reader archivePath={currentReader} onClose={() => setCurrentReader(null)} />;
+            return <Reader archivePath={currentReader} onClose={() => setCurrentReader(null)} defaultDirection={defaultDirection} />;
         }
       })()}
 
@@ -284,9 +306,12 @@ function AppContent() {
       <Layout
         currentView={currentView}
         onViewChange={setCurrentView}
+        selectedCategory={searchCriteria.category}
+        onCategorySelect={handleCategorySelect}
         stats={{
           totalFiles: files.length,
-          readingCount: readingHistory.length
+          readingCount: readingHistory.length,
+          categoryStats
         }}
       >
         {currentView === 'library' && (

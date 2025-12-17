@@ -8,9 +8,10 @@ import ReaderControls from './ReaderControls';
 interface ReaderProps {
     archivePath: string;
     onClose: () => void;
+    defaultDirection?: 'ltr' | 'rtl';
 }
 
-const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
+const Reader: React.FC<ReaderProps> = ({ archivePath, onClose, defaultDirection }) => {
     const {
         viewMode,
         readingDirection,
@@ -20,6 +21,13 @@ const Reader: React.FC<ReaderProps> = ({ archivePath, onClose }) => {
         setCurrentPage,
         reset,
     } = useReaderStore();
+
+    // Apply default direction on mount if provided
+    useEffect(() => {
+        if (defaultDirection) {
+            setReadingDirection(defaultDirection);
+        }
+    }, [defaultDirection, setReadingDirection]);
 
     const [totalPages, setTotalPages] = useState(0);
     const [loading, setLoading] = useState(true);

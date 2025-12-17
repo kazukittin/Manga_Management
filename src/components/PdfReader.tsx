@@ -10,9 +10,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 interface PdfReaderProps {
     filePath: string;
     onClose: () => void;
+    defaultDirection?: 'ltr' | 'rtl';
 }
 
-const PdfReader: React.FC<PdfReaderProps> = ({ filePath, onClose }) => {
+const PdfReader: React.FC<PdfReaderProps> = ({ filePath, onClose, defaultDirection }) => {
     const {
         viewMode,
         readingDirection,
@@ -22,6 +23,13 @@ const PdfReader: React.FC<PdfReaderProps> = ({ filePath, onClose }) => {
         setCurrentPage,
         reset,
     } = useReaderStore();
+
+    // Apply default direction on mount if provided
+    useEffect(() => {
+        if (defaultDirection) {
+            setReadingDirection(defaultDirection);
+        }
+    }, [defaultDirection, setReadingDirection]);
 
     const [numPages, setNumPages] = useState(0);
     const [loading, setLoading] = useState(true);

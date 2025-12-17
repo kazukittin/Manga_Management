@@ -1,17 +1,36 @@
 import React from 'react';
 import Sidebar, { ViewMode } from './Sidebar';
+import { BookCategory } from '../types/book';
+
+interface CategoryStats {
+    manga: number;
+    novel: number;
+    reference: number;
+    other: number;
+    uncategorized: number;
+}
 
 interface LayoutProps {
     children: React.ReactNode;
     currentView: ViewMode;
     onViewChange: (view: ViewMode) => void;
+    selectedCategory?: BookCategory;
+    onCategorySelect: (category: BookCategory | undefined) => void;
     stats?: {
         totalFiles: number;
         readingCount: number;
+        categoryStats: CategoryStats;
     };
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, currentView, onViewChange, stats }) => {
+const Layout: React.FC<LayoutProps> = ({
+    children,
+    currentView,
+    onViewChange,
+    selectedCategory,
+    onCategorySelect,
+    stats
+}) => {
     return (
         <div className="flex h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden selection:bg-blue-500/30">
             {/* Background Ambience */}
@@ -21,7 +40,13 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, onViewChange, st
             </div>
 
             <div className="relative z-10 flex w-full h-full">
-                <Sidebar currentView={currentView} onViewChange={onViewChange} stats={stats} />
+                <Sidebar
+                    currentView={currentView}
+                    onViewChange={onViewChange}
+                    selectedCategory={selectedCategory}
+                    onCategorySelect={onCategorySelect}
+                    stats={stats}
+                />
 
                 <main className="flex-1 flex flex-col h-full overflow-hidden relative">
                     {children}
@@ -32,3 +57,4 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, onViewChange, st
 };
 
 export default Layout;
+

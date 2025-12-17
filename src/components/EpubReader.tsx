@@ -6,9 +6,10 @@ import ReaderControls from './ReaderControls';
 interface EpubReaderProps {
     filePath: string;
     onClose: () => void;
+    defaultDirection?: 'ltr' | 'rtl';
 }
 
-const EpubReader: React.FC<EpubReaderProps> = ({ filePath, onClose }) => {
+const EpubReader: React.FC<EpubReaderProps> = ({ filePath, onClose, defaultDirection }) => {
     const {
         viewMode,
         readingDirection,
@@ -18,6 +19,13 @@ const EpubReader: React.FC<EpubReaderProps> = ({ filePath, onClose }) => {
         setCurrentPage,
         reset,
     } = useReaderStore();
+
+    // Apply default direction on mount if provided
+    useEffect(() => {
+        if (defaultDirection) {
+            setReadingDirection(defaultDirection);
+        }
+    }, [defaultDirection, setReadingDirection]);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const bookRef = useRef<Book | null>(null);
