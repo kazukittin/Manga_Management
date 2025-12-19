@@ -1,5 +1,5 @@
 import React from 'react';
-import { Library, Clock, BookOpen, BookText, GraduationCap, Layers } from 'lucide-react';
+import { Library, Clock, BookOpen, BookText, GraduationCap, Layers, FileQuestion, FolderPlus, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BookCategory, CATEGORY_OPTIONS } from '../types/book';
 
@@ -18,6 +18,9 @@ interface SidebarProps {
   onViewChange: (view: ViewMode) => void;
   selectedCategory?: BookCategory;
   onCategorySelect: (category: BookCategory | undefined) => void;
+  libraryPaths?: string[];
+  onAddFolder?: () => void;
+  onRemoveFolder?: (path: string) => void;
   stats?: {
     totalFiles: number;
     readingCount: number;
@@ -31,6 +34,7 @@ const CATEGORY_ICONS: Record<BookCategory | 'all', React.ElementType> = {
   novel: BookText,
   reference: GraduationCap,
   other: Library,
+  uncategorized: FileQuestion,
 };
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -38,6 +42,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onViewChange,
   selectedCategory,
   onCategorySelect,
+  libraryPaths = [],
+  onAddFolder,
+  onRemoveFolder,
   stats
 }) => {
   const navItems = [
@@ -140,6 +147,51 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
       </nav>
+
+      {/* Folder List Section */}
+      {currentView === 'library' && (
+        <div className="px-3 py-2 border-t border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">フォルダー</span>
+            {onAddFolder && (
+              <button
+                onClick={onAddFolder}
+                className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                title="フォルダーを追加"
+              >
+                <FolderPlus size={14} />
+              </button>
+            )}
+          </div>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {libraryPaths.length === 0 ? (
+              <p className="text-xs text-slate-600 italic">フォルダーが登録されていません</p>
+            ) : (
+              libraryPaths.map((path) => {
+                const folderName = path.split(/[\\/]/).pop() || path;
+                return (
+                  <div
+                    key={path}
+                    className="group flex items-center gap-2 px-2 py-1 rounded bg-slate-800/50 text-xs"
+                    title={path}
+                  >
+                    <span className="flex-1 text-slate-400 truncate">{folderName}</span>
+                    {onRemoveFolder && (
+                      <button
+                        onClick={() => onRemoveFolder(path)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-all"
+                        title="削除"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="p-4 border-t border-white/5">
         <div className="bg-slate-950/50 rounded-xl p-4 space-y-3">

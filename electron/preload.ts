@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('api', {
   getCovers: (filePaths: string[]) => ipcRenderer.invoke('library:getCovers', filePaths),
   getCoversBatch: (filePaths: string[], startIndex: number, count: number) => ipcRenderer.invoke('library:getCoversBatch', filePaths, startIndex, count),
   getSavedRoot: () => ipcRenderer.invoke('library:getSavedRoot'),
-  setRoot: (path: string) => ipcRenderer.invoke('library:setRoot', path),
+  setRoot: (paths: string[]) => ipcRenderer.invoke('library:setRoot', paths),
   getImageCount: (archivePath: string) => ipcRenderer.invoke('archive:getImageCount', archivePath),
   saveProgress: (filePath: string, page: number) => ipcRenderer.invoke('progress:save', filePath, page),
   loadProgress: (filePath: string) => ipcRenderer.invoke('progress:load', filePath),
@@ -36,4 +36,6 @@ contextBridge.exposeInMainWorld('api', {
   saveMetadata: (filePath: string, metadata: { title?: string; author?: string; publisher?: string; category?: 'manga' | 'novel' | 'reference' | 'other'; tags: string[] }) =>
     ipcRenderer.invoke('metadata:update', filePath, metadata),
   deleteManga: (filePath: string) => ipcRenderer.invoke('library:deleteManga', filePath),
+  fetchMetadataByTitle: (title: string) => ipcRenderer.invoke('metadata:fetch-by-title', title),
+  saveCover: (filePath: string, base64Data: string) => ipcRenderer.invoke('metadata:save-cover', filePath, base64Data),
 })

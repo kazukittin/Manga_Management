@@ -1,5 +1,6 @@
 import AdmZip from 'adm-zip';
 import path from 'path';
+import fs from 'fs';
 
 const SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.bmp'];
 
@@ -8,12 +9,26 @@ const thumbnailCache = new Map<string, string>();
 
 export async function extractCoverImage(archivePath: string): Promise<string | null> {
     try {
-        // Check cache first
         if (thumbnailCache.has(archivePath)) {
             return thumbnailCache.get(archivePath)!;
         }
 
         const ext = path.extname(archivePath).toLowerCase();
+        const baseName = path.basename(archivePath, ext);
+        const dirName = path.dirname(archivePath);
+
+        // Check for sidecar cover image (SAME_NAME.jpg/png/etc)
+        // Only do this for ZIP/CBZ
+        if (ext === '.zip' || ext === '.cbz') {
+            for (const imgExt of SUPPORTED_IMAGE_EXTENSIONS) {
+                const sidecarPath = path.join(dirName, baseName + imgExt);
+                if (fs.existsSync(sidecarPath)) {
+                    const coverUrl = `manga://${encodeURIComponent(sidecarPath)}?path=${encodeURIComponent(sidecarPath)}`;
+                    thumbnailCache.set(archivePath, coverUrl);
+                    return coverUrl;
+                }
+            }
+        }
 
         // Handle ZIP/CBZ files
         if (ext === '.zip' || ext === '.cbz') {

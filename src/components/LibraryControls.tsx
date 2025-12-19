@@ -6,12 +6,13 @@ import { useMetadataOptions } from '../hooks/useMetadataOptions';
 import './LibraryControls.css';
 
 interface LibraryControlsProps {
-    onOpenFolder: () => void;
+    onBatchFetch?: () => void;
     loading: boolean;
+    batchFetching?: boolean;
     hasFolder: boolean;
 }
 
-const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading, hasFolder }) => {
+const LibraryControls: React.FC<LibraryControlsProps> = ({ onBatchFetch, loading, batchFetching, hasFolder }) => {
     const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
     const { authors, publishers, tags } = useMetadataOptions();
     const [form, setForm] = useState<BookSearchCriteria>(searchCriteria);
@@ -88,24 +89,31 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onOpenFolder, loading
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={onOpenFolder}
-                            disabled={loading}
-                            className={`flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/20 transition-all ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            {loading ? (
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            ) : (
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
-                                </svg>
-                            )}
-                            {hasFolder ? 'フォルダー変更' : '開く'}
-                        </button>
+                        {hasFolder && onBatchFetch && (
+                            <button
+                                type="button"
+                                onClick={onBatchFetch}
+                                disabled={loading || batchFetching}
+                                className={`flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 transition-all ${(loading || batchFetching) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {batchFetching ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        取得中...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                        </svg>
+                                        一括取得
+                                    </>
+                                )}
+                            </button>
+                        )}
 
                         <button
                             type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import CoverGrid from './components/CoverGrid';
 import LibraryControls from './components/LibraryControls';
 import Reader from './components/Reader';
@@ -22,7 +22,7 @@ function AppContent() {
   const {
     files,
     covers,
-    currentPath,
+    libraryPaths,
     metadata,
     sortOrder,
     searchCriteria,
@@ -30,7 +30,9 @@ function AppContent() {
     loading,
     setFiles,
     setCovers,
-    setCurrentPath,
+    setLibraryPaths,
+    addLibraryPath,
+    removeLibraryPath,
     setMetadata,
     updateMetadata,
     setLoading,
@@ -47,6 +49,9 @@ function AppContent() {
   const [metadataTarget, setMetadataTarget] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [currentView, setCurrentView] = useState<ViewMode>('library');
+  const [batchFetching, setBatchFetching] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; currentFile: string } | null>(null);
+  const batchCancelRef = useRef(false);
 
   const handleOpenReader = async (filePath: string) => {
     try {
@@ -77,25 +82,26 @@ function AppContent() {
     loadPreferences();
   }, [loadPreferences]);
 
-  const loadLibrary = async (path: string, persistSelection = false) => {
-    setCurrentPath(path);
+  // Load all library paths
+  const loadAllLibraries = async (paths: string[]) => {
+    if (paths.length === 0) return;
+
     setLoading(true);
-
     try {
-      if (persistSelection) {
-        await window.api.setRoot(path);
-      }
+      const storedMetadata = await window.api.loadMetadata() as Record<string, BookMetadata>;
 
-      const [fileList, storedMetadata] = await Promise.all([
-        window.api.scanLibrary(path),
-        window.api.loadMetadata() as Promise<Record<string, BookMetadata>>,
-      ]);
+      // Scan all paths in parallel
+      const scanResults = await Promise.all(
+        paths.map(path => window.api.scanLibrary(path))
+      );
 
-      setFiles(fileList);
+      // Flatten all files
+      const allFiles = scanResults.flat();
+      setFiles(allFiles);
 
-      // Filter metadata to the files that exist in the current library and ensure defaults
+      // Filter metadata
       const filteredMetadata: Record<string, BookMetadata> = {};
-      fileList.forEach((filePath) => {
+      allFiles.forEach((filePath) => {
         const fileNameWithExt = filePath.split(/[\\/]/).pop() || filePath;
         const fileName = fileNameWithExt.replace(/\.[^/.]+$/, "");
         const entry = storedMetadata[filePath];
@@ -109,43 +115,64 @@ function AppContent() {
       });
       setMetadata(filteredMetadata);
 
-      // Load only the first visible batch for instant startup  
-      const INITIAL_BATCH_SIZE = 30; // Reduced for faster startup
-      const initialBatch = fileList.slice(0, INITIAL_BATCH_SIZE);
+      // Load initial covers
+      const INITIAL_BATCH_SIZE = 30;
+      const initialBatch = allFiles.slice(0, INITIAL_BATCH_SIZE);
       const coverData = await window.api.getCovers(initialBatch);
       setCovers(coverData);
     } catch (error) {
-      console.error('Error loading library:', error);
+      console.error('Error loading libraries:', error);
       showToast('ライブラリの読み込みに失敗しました', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenFolder = async () => {
+  const handleAddFolder = async () => {
     const path = await window.api.selectDirectory();
-    if (path) {
-      await loadLibrary(path, true);
+    if (path && !libraryPaths.includes(path)) {
+      const newPaths = [...libraryPaths, path];
+      addLibraryPath(path);
+      await window.api.setRoot(newPaths);
+      await loadAllLibraries(newPaths);
     }
   };
 
+  const handleRemoveFolder = async (path: string) => {
+    const newPaths = libraryPaths.filter(p => p !== path);
+    removeLibraryPath(path);
+    await window.api.setRoot(newPaths);
+    await loadAllLibraries(newPaths);
+  };
+
   useEffect(() => {
-    const loadSavedLibrary = async () => {
+    const loadSavedLibraries = async () => {
       try {
-        const savedPath = await window.api.getSavedRoot();
-        if (savedPath) {
-          await loadLibrary(savedPath, false);
+        const savedPaths = await window.api.getSavedRoot();
+        if (savedPaths) {
+          const paths = Array.isArray(savedPaths) ? savedPaths : [savedPaths];
+          setLibraryPaths(paths);
+          await loadAllLibraries(paths);
         }
       } catch (error) {
-        console.error('Failed to load saved library path:', error);
+        console.error('Failed to load saved library paths:', error);
       }
     };
 
-    loadSavedLibrary();
+    loadSavedLibraries();
   }, []);
 
-  const handleSaveMetadata = async (filePath: string, data: Partial<BookMetadata>) => {
+  const handleSaveMetadata = async (filePath: string, data: Partial<BookMetadata>, cover?: string) => {
     try {
+      if (cover) {
+        try {
+          await window.api.saveCover(filePath, cover);
+        } catch (error) {
+          console.error('Failed to save cover:', error);
+          showToast('表紙画像の保存に失敗しました', 'error');
+        }
+      }
+
       const title = data.title?.trim() || metadata[filePath]?.title || fileNameFromPath(filePath);
       const payload: BookMetadata = {
         ...data,
@@ -188,9 +215,8 @@ function AppContent() {
         showToast('削除しました', 'success');
 
         // Re-scan library to ensure consistency
-        if (currentPath) {
-          // Don't await this to keep UI responsive, but it will update the list eventually
-          loadLibrary(currentPath, false);
+        if (libraryPaths.length > 0) {
+          loadAllLibraries(libraryPaths);
         }
 
       } else {
@@ -201,6 +227,78 @@ function AppContent() {
       showToast('削除中にエラーが発生しました', 'error');
     } finally {
       setDeleteTarget(null);
+    }
+  };
+
+  // Batch fetch metadata for all files
+  const handleBatchFetch = async () => {
+    if (libraryPaths.length === 0 || files.length === 0) return;
+
+    // Filter files that need fetching
+    const filesToFetch = files.filter(fp => !metadata[fp]?.author);
+    if (filesToFetch.length === 0) {
+      showToast('すべてのファイルにメタデータが設定されています', 'info');
+      return;
+    }
+
+    setBatchFetching(true);
+    setBatchProgress({ current: 0, total: filesToFetch.length, currentFile: '' });
+    batchCancelRef.current = false;
+    let fetchedCount = 0;
+
+    try {
+      for (let i = 0; i < filesToFetch.length; i++) {
+        const filePath = filesToFetch[i];
+        const fileName = fileNameFromPath(filePath);
+
+        setBatchProgress({ current: i + 1, total: filesToFetch.length, currentFile: fileName });
+
+        // Check for cancellation
+        if (batchCancelRef.current) {
+          showToast('一括取得をキャンセルしました', 'info');
+          break;
+        }
+
+        try {
+          const result = await window.api.fetchMetadataByTitle(fileName);
+          if (result) {
+            const payload: BookMetadata = {
+              title: result.title ?? fileName,
+              author: result.author,
+              publisher: result.publisher,
+              category: result.category,
+              tags: result.tags ?? [],
+            };
+
+            await window.api.saveMetadata(filePath, payload);
+
+            // Save cover if available
+            if (result.cover) {
+              try {
+                await window.api.saveCover(filePath, result.cover);
+              } catch (e) {
+                console.error('Failed to save cover for', filePath, e);
+              }
+            }
+
+            fetchedCount++;
+          }
+        } catch (e) {
+          console.error('Failed to fetch metadata for', filePath, e);
+        }
+      }
+
+      showToast(`${fetchedCount}件の情報を取得しました`, 'success');
+
+      // Reload library
+      await loadAllLibraries(libraryPaths);
+
+    } catch (error) {
+      console.error('Batch fetch error:', error);
+      showToast('一括取得中にエラーが発生しました', 'error');
+    } finally {
+      setBatchFetching(false);
+      setBatchProgress(null);
     }
   };
 
@@ -228,7 +326,7 @@ function AppContent() {
   const categoryStats = useMemo(() => {
     const stats = { manga: 0, novel: 0, reference: 0, other: 0, uncategorized: 0 };
     Object.values(metadata).forEach((m) => {
-      if (m.category) {
+      if (m.category && m.category !== 'uncategorized') {
         stats[m.category]++;
       } else {
         stats.uncategorized++;
@@ -269,6 +367,44 @@ function AppContent() {
 
   return (
     <>
+      {/* Batch Fetch Progress Modal */}
+      {batchProgress && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-8 max-w-lg w-full mx-4 shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-4 text-center">メタデータ一括取得中</h3>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-700 rounded-full h-4 mb-4 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-emerald-500 h-full rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+              />
+            </div>
+
+            {/* Progress Text */}
+            <p className="text-center text-gray-300 text-lg mb-2">
+              {batchProgress.current} / {batchProgress.total}
+            </p>
+
+            {/* Current File */}
+            <p className="text-center text-gray-500 text-sm truncate" title={batchProgress.currentFile}>
+              処理中: {batchProgress.currentFile}
+            </p>
+
+            {/* Spinner and Cancel */}
+            <div className="flex flex-col items-center gap-4 mt-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+              <button
+                onClick={() => { batchCancelRef.current = true; }}
+                className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {currentReader && (() => {
         const fileType = getFileType(currentReader);
         const bookCategory = metadata[currentReader]?.category;
@@ -287,7 +423,7 @@ function AppContent() {
         <MetadataModal
           filePath={metadataTarget}
           metadata={metadata[metadataTarget]}
-          onSave={(data) => handleSaveMetadata(metadataTarget, data)}
+          onSave={(data, cover) => handleSaveMetadata(metadataTarget, data, cover)}
           onClose={() => setMetadataTarget(null)}
           onDelete={() => confirmDelete(metadataTarget)}
         />
@@ -308,6 +444,9 @@ function AppContent() {
         onViewChange={setCurrentView}
         selectedCategory={searchCriteria.category}
         onCategorySelect={handleCategorySelect}
+        libraryPaths={libraryPaths}
+        onAddFolder={handleAddFolder}
+        onRemoveFolder={handleRemoveFolder}
         stats={{
           totalFiles: files.length,
           readingCount: readingHistory.length,
@@ -317,9 +456,10 @@ function AppContent() {
         {currentView === 'library' && (
           <div className="flex flex-col h-full">
             <LibraryControls
-              onOpenFolder={handleOpenFolder}
+              onBatchFetch={handleBatchFetch}
               loading={loading}
-              hasFolder={Boolean(currentPath)}
+              batchFetching={batchFetching}
+              hasFolder={libraryPaths.length > 0}
             />
 
             <main className="flex-1 overflow-hidden relative p-4">
@@ -364,18 +504,18 @@ function AppContent() {
                     <p className="text-sm">「フォルダーを開く」をクリックして作品を読み込みます。</p>
                   </div>
                   <button
-                    onClick={handleOpenFolder}
+                    onClick={handleAddFolder}
                     disabled={loading}
                     className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed px-4 py-2 rounded text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                   >
-                    {loading ? '読み込み中...' : 'フォルダーを開く'}
+                    {loading ? '読み込み中...' : 'フォルダーを追加'}
                   </button>
                 </div>
               )}
             </main>
             {/* Small Footer for Path Info */}
             <div className="px-6 py-2 text-[10px] text-gray-500 border-t border-white/5 truncate">
-              {currentPath}
+              {libraryPaths.length > 0 ? `${libraryPaths.length}個のフォルダー` : ''}
             </div>
           </div>
         )}

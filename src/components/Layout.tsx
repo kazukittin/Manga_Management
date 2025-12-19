@@ -16,6 +16,9 @@ interface LayoutProps {
     onViewChange: (view: ViewMode) => void;
     selectedCategory?: BookCategory;
     onCategorySelect: (category: BookCategory | undefined) => void;
+    libraryPaths?: string[];
+    onAddFolder?: () => void;
+    onRemoveFolder?: (path: string) => void;
     stats?: {
         totalFiles: number;
         readingCount: number;
@@ -29,6 +32,9 @@ const Layout: React.FC<LayoutProps> = ({
     onViewChange,
     selectedCategory,
     onCategorySelect,
+    libraryPaths,
+    onAddFolder,
+    onRemoveFolder,
     stats
 }) => {
     return (
@@ -45,6 +51,9 @@ const Layout: React.FC<LayoutProps> = ({
                     onViewChange={onViewChange}
                     selectedCategory={selectedCategory}
                     onCategorySelect={onCategorySelect}
+                    libraryPaths={libraryPaths}
+                    onAddFolder={onAddFolder}
+                    onRemoveFolder={onRemoveFolder}
                     stats={stats}
                 />
 

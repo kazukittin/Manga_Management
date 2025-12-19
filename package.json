@@ -11,10 +11,12 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
+    "cheerio": "^1.0.0-rc.12",
     "clsx": "^2.1.1",
     "electron-store": "^11.0.2",
     "epubjs": "^0.3.93",
     "fs-extra": "^11.3.2",
+    "iconv-lite": "^0.7.1",
     "lucide-react": "^0.556.0",
     "path-browserify": "^1.0.1",
     "react": "^18.2.0",

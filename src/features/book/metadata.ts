@@ -1,12 +1,13 @@
 export type SearchMode = 'AND' | 'OR';
 
-export type BookCategory = 'manga' | 'novel' | 'reference' | 'other';
+export type BookCategory = 'manga' | 'novel' | 'reference' | 'other' | 'uncategorized';
 
 export const CATEGORY_OPTIONS: { value: BookCategory; label: string }[] = [
     { value: 'manga', label: 'マンガ' },
     { value: 'novel', label: '小説' },
     { value: 'reference', label: '参考書' },
     { value: 'other', label: 'その他' },
+    { value: 'uncategorized', label: '未分類' },
 ];
 
 export interface BookMetadata {
@@ -60,7 +61,9 @@ export function filterBooksByCriteria(bookList: BookItem[], criteria: BookSearch
             ? normalizeText(metadata.publisher).includes(normalizedPublisher)
             : true;
         const matchesCategory = hasCategory
-            ? metadata.category === criteria.category
+            ? (criteria.category === 'uncategorized'
+                ? (!metadata.category || metadata.category === 'uncategorized')
+                : metadata.category === criteria.category)
             : true;
         const matchesTags = hasTags
             ? normalizedSearchTags.every((tag) => normalizeTags(metadata.tags).includes(tag))
