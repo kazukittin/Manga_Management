@@ -146,57 +146,77 @@ app.whenReady().then(() => {
   })
 
   async function fetchDLsiteMetadata(query: string) {
+    console.log('[DLsite] fetchDLsiteMetadata called with:', query)
     try {
       // 1. Determine Target URL
       let targetUrl = ''
       const rjMatch = query.match(/RJ\d{6,8}/i)
+      console.log('[DLsite] RJ match:', rjMatch)
 
       if (rjMatch) {
         // Direct product page (try 'work' - redirects usually handle mania/books/etc)
         // Actually simpler to search by ID which guarantees redirection to correct service (maniax/books/etc)
         targetUrl = `https://www.dlsite.com/maniax/work/=/product_id/${rjMatch[0]}.html`
+        console.log('[DLsite] Using direct product URL:', targetUrl)
       } else {
-        // Search by keyword - simplify query (use first meaningful part)
-        // Remove common suffixes and keep core title
+        // Search by keyword using Suggest API (more reliable than HTML scraping)
+        // Clean query - remove file extension and bracketed content
         const cleanQuery = query
           .replace(/\.[^.]+$/, '') // Remove extension
-          .replace(/[\[\(].+?[\]\)]/, '') // Remove bracketed content
+          .replace(/[\[\(].+?[\]\)]/g, '') // Remove ALL bracketed content
           .replace(/\s+/g, ' ')
           .trim()
           .split(/\s+/)
-          .slice(0, 5) // Use first 5 words max
+          .slice(0, 3) // Use first 3 words max for better matching
           .join(' ')
+        console.log('[DLsite] Using Suggest API. Clean query:', cleanQuery)
 
-        // Use home domain for wider search coverage
-        const searchUrl = `https://www.dlsite.com/home/fsr/=/language/jp/keyword/${encodeURIComponent(cleanQuery)}/per_page/30/`
-        const searchRes = await fetch(searchUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml',
-            'Accept-Language': 'ja,en;q=0.9'
+        // Use Suggest API which returns JSON with product IDs
+        const suggestUrl = `https://www.dlsite.com/suggest?term=${encodeURIComponent(cleanQuery)}&site=adult-jp&time=${Date.now()}`
+        console.log('[DLsite] Suggest URL:', suggestUrl)
+
+        try {
+          const suggestRes = await fetch(suggestUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/json'
+            }
+          })
+          console.log('[DLsite] Suggest response status:', suggestRes.status)
+
+          if (suggestRes.ok) {
+            const suggestData = await suggestRes.json()
+            console.log('[DLsite] Suggest data - works found:', suggestData.work?.length || 0)
+
+            if (suggestData.work && suggestData.work.length > 0) {
+              // Get the first work's RJ code
+              const firstWork = suggestData.work[0]
+              const workno = firstWork.workno || firstWork.product_id
+              console.log('[DLsite] Found work via Suggest:', workno, '-', firstWork.work_name)
+              targetUrl = `https://www.dlsite.com/maniax/work/=/product_id/${workno}.html`
+            } else {
+              console.log('[DLsite] No works found in Suggest API')
+              return null
+            }
+          } else {
+            console.log('[DLsite] Suggest API failed')
+            return null
           }
-        })
-        const searchHtml = await searchRes.text()
-        const $ = load(searchHtml)
-
-        // Find first product link (any domain: maniax, aix, home, etc.)
-        const productLink = $('a[href*="/work/=/product_id/"]').filter((_, el) => {
-          const href = $(el).attr('href') || ''
-          // Only work links, not cart/wishlist/review
-          return href.includes('/work/=/product_id/') && !href.includes('/cart/') && !href.includes('/wishlist/')
-        }).first().attr('href')
-
-        if (productLink) {
-          targetUrl = productLink
-        } else {
+        } catch (suggestError) {
+          console.error('[DLsite] Suggest API error:', suggestError)
           return null
         }
       }
 
       // 2. Scrape Product Page
+      console.log('[DLsite] Fetching product page:', targetUrl)
       const res = await fetch(targetUrl)
+      console.log('[DLsite] Product page response status:', res.status)
       // Handle 404
-      if (!res.ok) return null
+      if (!res.ok) {
+        console.log('[DLsite] Product page not OK, returning null')
+        return null
+      }
 
       const html = await res.text()
       const $ = load(html)
@@ -207,10 +227,13 @@ app.whenReady().then(() => {
       const author = $('table#work_outline th:contains("作者")').next().text().trim() ||
         $('table#work_outline th:contains("Authors")').next().text().trim()
 
+      console.log('[DLsite] Extracted - Title:', title, 'Maker:', maker, 'Author:', author)
+
       const tags: string[] = []
       $('.main_genre a').each((_, el) => {
         tags.push($(el).text().trim())
       })
+      console.log('[DLsite] Tags:', tags)
 
       const description = $('.work_parts_area').text().trim()
 
@@ -228,6 +251,8 @@ app.whenReady().then(() => {
       let coverUrl = ''
       const sliderImg = $('.slider_item').first().attr('src') // Standard slider
       const metaImg = $('meta[property="og:image"]').attr('content') // Fallback
+
+      console.log('[DLsite] Cover - sliderImg:', sliderImg, 'metaImg:', metaImg)
 
       if (sliderImg) {
         coverUrl = sliderImg.startsWith('//') ? 'https:' + sliderImg : sliderImg
@@ -247,11 +272,16 @@ app.whenReady().then(() => {
             coverBase64 = `data:${imgRes.headers.get('content-type') || 'image/jpeg'};base64,${Buffer.from(buffer).toString('base64')}`
           }
         } catch (e) {
-          console.error('Failed to download DLsite cover', e)
+          console.error('[DLsite] Failed to download cover', e)
         }
       }
 
-      return {
+      // Return even if title is empty - log it
+      if (!title) {
+        console.log('[DLsite] WARNING: Title is empty!')
+      }
+
+      const result = {
         title,
         author: author || maker, // Fallback to circle name if author not explicit
         publisher: maker,
@@ -260,9 +290,11 @@ app.whenReady().then(() => {
         cover: coverBase64,
         category
       }
+      console.log('[DLsite] Returning result with title:', result.title)
+      return result
 
     } catch (error) {
-      console.error('DLsite Scraping Error:', error)
+      console.error('[DLsite] Scraping Error:', error)
       return null
     }
   }
@@ -342,21 +374,28 @@ app.whenReady().then(() => {
   }
 
   ipcMain.handle('metadata:fetch-by-title', async (_event, title: string) => {
+    console.log('[Metadata] Starting fetch for:', title)
     try {
       // Priority 1: DLsite (RJ code direct or keyword search)
+      console.log('[Metadata] Trying DLsite...')
       const dlsiteData = await fetchDLsiteMetadata(title)
+      console.log('[Metadata] DLsite result:', dlsiteData ? 'SUCCESS - ' + dlsiteData.title : 'null')
       if (dlsiteData) return dlsiteData
 
       // Priority 2: FANZA (DMM)
+      console.log('[Metadata] Trying FANZA...')
       const fanzaData = await fetchFanzaMetadata(title)
+      console.log('[Metadata] FANZA result:', fanzaData ? 'SUCCESS - ' + fanzaData.title : 'null')
       if (fanzaData) return fanzaData
 
       // Priority 3: Google Books (General books)
+      console.log('[Metadata] Trying Google Books...')
       const gbResponse = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(title)}`)
       const gbData = await gbResponse.json()
 
       if (gbData.items && gbData.items.length > 0) {
         const info = gbData.items[0].volumeInfo
+        console.log('[Metadata] Google Books SUCCESS:', info.title)
         return {
           title: info.title,
           author: info.authors ? info.authors[0] : undefined,
@@ -366,9 +405,10 @@ app.whenReady().then(() => {
         }
       }
 
+      console.log('[Metadata] All sources returned null')
       return null
     } catch (error) {
-      console.error('Failed to fetch metadata:', error)
+      console.error('[Metadata] Failed to fetch metadata:', error)
       return null
     }
   })
