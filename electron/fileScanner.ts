@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const EXTENSIONS = ['.zip', '.cbz', '.jpg', '.png', '.webp', '.avif', '.pdf', '.epub'];
+const EXTENSIONS = ['.zip', '.cbz', '.jpg', '.png', '.webp', '.avif', '.gif', '.pdf', '.epub'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.bmp'];
 const ARCHIVE_EXTENSIONS = ['.zip', '.cbz'];
 
@@ -11,6 +11,10 @@ export async function scanDirectory(dirPath: string): Promise<string[]> {
         const promises = list.map(async (dirent) => {
             const fullPath = path.join(dirPath, dirent.name);
             if (dirent.isDirectory()) {
+                // Skip thumbnail cache directory
+                if (dirent.name === 'thumbnail') {
+                    return [];
+                }
                 return scanDirectory(fullPath);
             } else {
                 const ext = path.extname(fullPath).toLowerCase();

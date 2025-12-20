@@ -1,30 +1,92 @@
-# React + TypeScript + Vite
+# Book Library - 書籍管理アプリケーション
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Electron + React + TypeScript で構築された、書籍・同人誌管理アプリケーションです。
 
-Currently, two official plugins are available:
+## 主な機能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 📚 ライブラリ管理
+- **複数フォルダ対応**: 複数のフォルダをライブラリとして登録可能
+- **対応フォーマット**: ZIP, CBZ, PDF, EPUB, JPG, PNG, WebP, AVIF, GIF
+- **サムネイル自動生成**: ZIPファイルから表紙を抽出し、`thumbnail/` フォルダにキャッシュ
 
-## Expanding the ESLint configuration
+### 🔍 メタデータ取得
+自動メタデータ取得機能（検索順序）:
+1. **DLsite**: RJコードまたはキーワード検索
+2. **FANZA (DMM)**: キーワード検索
+3. **Google Books**: 一般書籍
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+取得される情報:
+- タイトル
+- 作者/サークル名
+- 出版社/メーカー
+- タグ/ジャンル
+- 表紙画像
 
-- Configure the top-level `parserOptions` property like this:
+### 📖 ビューア
+- **ZIP/CBZ**: 内蔵画像ビューア（左右反転対応）
+- **PDF**: PDF.js ベースのビューア
+- **EPUB**: react-pdf ベースのビューア
+- 読書進捗の自動保存
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+### 🏷️ カテゴリ分類
+- マンガ
+- 小説
+- 参考書
+- その他
+- 未分類
+
+### 📊 その他の機能
+- **検索・フィルタ**: タイトル、作者、出版社、タグで検索
+- **ソート**: 名前順、日付順、作者順、出版社順
+- **読書履歴**: 最近読んだ作品の履歴（50件まで）
+- **一括メタデータ取得**: フォルダ内の全ファイルに対して自動取得
+
+## インストール
+
+```bash
+# 依存関係のインストール
+npm install
+
+# 開発サーバー起動
+npm run dev
+
+# ビルド
+npm run build
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+## 使い方
+
+1. **フォルダを追加**: サイドバーの「フォルダー」セクションで「+」ボタンをクリック
+2. **作品を閲覧**: グリッドから作品をクリックしてビューアを開く
+3. **メタデータ編集**: 作品カードを右クリック → 「情報を編集」
+4. **一括取得**: ヘッダーの「一括取得」ボタンでファイル名からメタデータを自動取得
+
+## フォルダ構造
+
+```
+ライブラリフォルダ/
+├── 作品1.zip
+├── 作品2.cbz
+├── 作品3.pdf
+└── thumbnail/          # 自動生成されるサムネイルキャッシュ
+    ├── 作品1_a1b2c3d4.jpg
+    └── 作品2_e5f6g7h8.jpg
+```
+
+## 技術スタック
+
+- **フレームワーク**: Electron + Vite
+- **フロントエンド**: React 18 + TypeScript
+- **状態管理**: Zustand (with persist)
+- **スタイリング**: Tailwind CSS
+- **HTMLパース**: Cheerio
+- **ZIP処理**: adm-zip
+
+## 設定ファイル
+
+アプリケーションの設定は以下に保存されます:
+- **Windows**: `%APPDATA%\manga-management\config.json`
+
+## ライセンス
+
+MIT License

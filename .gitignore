@@ -37,3 +37,6 @@ Thumbs.db
 
 # Local app persistence
 config.json
+
+# Library thumbnail cache folders
+**/thumbnail/

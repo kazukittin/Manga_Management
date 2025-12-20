@@ -1,11 +1,55 @@
 import AdmZip from 'adm-zip';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const SUPPORTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.bmp'];
 
-// In-memory cache for thumbnails
+// In-memory cache for thumbnails (URL lookups)
 const thumbnailCache = new Map<string, string>();
+
+// Store library paths for thumbnail folder location
+let libraryRoots: string[] = [];
+
+export function setLibraryRoots(roots: string[]) {
+    libraryRoots = roots;
+}
+
+// Find which library root a file belongs to
+function findLibraryRoot(filePath: string): string | null {
+    for (const root of libraryRoots) {
+        if (filePath.startsWith(root)) {
+            return root;
+        }
+    }
+    return null;
+}
+
+// Generate a unique thumbnail filename based on file path
+function getThumbnailPath(filePath: string): string | null {
+    const libraryRoot = findLibraryRoot(filePath);
+    if (!libraryRoot) return null;
+
+    const thumbnailDir = path.join(libraryRoot, 'thumbnail');
+    const hash = crypto.createHash('md5').update(filePath).digest('hex');
+    const ext = path.extname(filePath).toLowerCase();
+    const baseName = path.basename(filePath, ext);
+    // Use first 8 chars of hash + basename for readability
+    const thumbnailName = `${baseName.slice(0, 30)}_${hash.slice(0, 8)}.jpg`;
+    return path.join(thumbnailDir, thumbnailName);
+}
+
+// Ensure thumbnail directory exists
+function ensureThumbnailDir(filePath: string): string | null {
+    const libraryRoot = findLibraryRoot(filePath);
+    if (!libraryRoot) return null;
+
+    const thumbnailDir = path.join(libraryRoot, 'thumbnail');
+    if (!fs.existsSync(thumbnailDir)) {
+        fs.mkdirSync(thumbnailDir, { recursive: true });
+    }
+    return thumbnailDir;
+}
 
 export async function extractCoverImage(archivePath: string): Promise<string | null> {
     try {
@@ -17,8 +61,15 @@ export async function extractCoverImage(archivePath: string): Promise<string | n
         const baseName = path.basename(archivePath, ext);
         const dirName = path.dirname(archivePath);
 
+        // Check for existing saved thumbnail first
+        const thumbnailPath = getThumbnailPath(archivePath);
+        if (thumbnailPath && fs.existsSync(thumbnailPath)) {
+            const coverUrl = `manga://${encodeURIComponent(thumbnailPath)}?path=${encodeURIComponent(thumbnailPath)}`;
+            thumbnailCache.set(archivePath, coverUrl);
+            return coverUrl;
+        }
+
         // Check for sidecar cover image (SAME_NAME.jpg/png/etc)
-        // Only do this for ZIP/CBZ
         if (ext === '.zip' || ext === '.cbz') {
             for (const imgExt of SUPPORTED_IMAGE_EXTENSIONS) {
                 const sidecarPath = path.join(dirName, baseName + imgExt);
@@ -30,7 +81,7 @@ export async function extractCoverImage(archivePath: string): Promise<string | n
             }
         }
 
-        // Handle ZIP/CBZ files
+        // Handle ZIP/CBZ files - extract and save thumbnail
         if (ext === '.zip' || ext === '.cbz') {
             const zip = new AdmZip(archivePath);
             const entries = zip.getEntries()
@@ -41,7 +92,19 @@ export async function extractCoverImage(archivePath: string): Promise<string | n
                 return null;
             }
 
-            // Return manga:// URL for the first image
+            // Extract first image and save as thumbnail
+            const firstEntry = entries[0];
+            const imageData = firstEntry.getData();
+
+            if (thumbnailPath) {
+                ensureThumbnailDir(archivePath);
+                fs.writeFileSync(thumbnailPath, imageData);
+                const coverUrl = `manga://${encodeURIComponent(thumbnailPath)}?path=${encodeURIComponent(thumbnailPath)}`;
+                thumbnailCache.set(archivePath, coverUrl);
+                return coverUrl;
+            }
+
+            // Fallback to manga:// protocol if no library root found
             const coverUrl = `manga://${encodeURIComponent(archivePath)}?path=${encodeURIComponent(archivePath)}&index=0`;
             thumbnailCache.set(archivePath, coverUrl);
             return coverUrl;
@@ -57,6 +120,22 @@ export async function extractCoverImage(archivePath: string): Promise<string | n
     } catch (error) {
         console.error(`Error extracting cover from ${archivePath}:`, error);
         return null;
+    }
+}
+
+// Delete thumbnail for a specific file
+export function deleteThumbnail(filePath: string): boolean {
+    try {
+        const thumbnailPath = getThumbnailPath(filePath);
+        if (thumbnailPath && fs.existsSync(thumbnailPath)) {
+            fs.unlinkSync(thumbnailPath);
+            thumbnailCache.delete(filePath);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error(`Error deleting thumbnail for ${filePath}:`, error);
+        return false;
     }
 }
 
