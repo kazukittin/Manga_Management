@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import TagInput from './TagInput';
+import FilterModal from './FilterModal';
 import { useLibraryStore, SortOrder } from '../store/libraryStore';
-import { BookSearchCriteria, BookCategory, CATEGORY_OPTIONS, defaultSearchCriteria } from '../types/book';
+import { BookSearchCriteria, defaultSearchCriteria } from '../types/book';
 import { useMetadataOptions } from '../hooks/useMetadataOptions';
 import './LibraryControls.css';
 
@@ -16,7 +16,7 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onBatchFetch, loading
     const { sortOrder, searchCriteria, setSortOrder, setSearchCriteria } = useLibraryStore();
     const { authors, publishers, tags } = useMetadataOptions();
     const [form, setForm] = useState<BookSearchCriteria>(searchCriteria);
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     useEffect(() => {
         setForm(searchCriteria);
@@ -34,200 +34,124 @@ const LibraryControls: React.FC<LibraryControlsProps> = ({ onBatchFetch, loading
         updateCriteria((prev) => ({ ...prev, [key]: value }));
     };
 
-    const handleCategoryChange = (category: BookCategory | undefined) => {
-        updateCriteria((prev) => ({ ...prev, category }));
-    };
-
-    const handleModeChange = (mode: BookSearchCriteria['mode']) => {
-        updateCriteria((prev) => ({ ...prev, mode }));
-    };
-
     const handleReset = () => {
         const reset = { ...defaultSearchCriteria, tags: [] };
         setForm(reset);
         setSearchCriteria(reset);
     };
 
+    // Count active filters
+    const activeFilters = [
+        form.category,
+        form.author,
+        form.publisher,
+        form.tags.length > 0
+    ].filter(Boolean).length;
+
     return (
-        <div className="z-20 sticky top-0 px-6 py-4 backdrop-blur-sm">
-            <div className="glass-panel rounded-2xl p-4 transition-all duration-300">
-                <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1">
-                        {/* Search Bar */}
-                        <div className="relative flex-1 max-w-xl group">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg className="h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <input
-                                type="text"
-                                className="block w-full pl-10 pr-3 py-2 border border-white/5 rounded-xl leading-5 bg-white/5 text-gray-200 placeholder-gray-500 focus:outline-none focus:bg-white/10 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 sm:text-sm transition-all"
-                                placeholder="タイトルで検索..."
-                                value={form.title ?? ''}
-                                onChange={(e) => handleInputChange('title', e.target.value)}
-                            />
-                        </div>
-
-                        {/* Sort Dropdown */}
-                        <div className="relative">
-                            <select
-                                id="sort"
-                                value={sortOrder}
-                                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                                className="block w-full pl-3 pr-10 py-2 text-base border-white/5 bg-slate-800 text-white focus:outline-none focus:ring-blue-500/50 focus:border-blue-500/50 sm:text-sm rounded-xl cursor-pointer hover:bg-slate-700 transition-all [&>option]:bg-slate-800 [&>option]:text-white"
-                            >
-                                <option value="recent">最近読んだ順</option>
-                                <option value="natural">自然順</option>
-                                <option value="name">名前 (A-Z)</option>
-                                <option value="date">更新日</option>
-                                <option value="author">作者順</option>
-                                <option value="publisher">出版社順</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    {/* Right Actions */}
-                    <div className="flex items-center gap-2">
-                        {hasFolder && onBatchFetch && (
-                            <button
-                                type="button"
-                                onClick={onBatchFetch}
-                                disabled={loading || batchFetching}
-                                className={`flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 transition-all ${(loading || batchFetching) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                {batchFetching ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        取得中...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                        </svg>
-                                        一括取得
-                                    </>
-                                )}
-                            </button>
-                        )}
-
-                        <button
-                            type="button"
-                            onClick={() => setIsExpanded((prev) => !prev)}
-                            className={`p-2 rounded-xl border border-white/5 transition-colors ${isExpanded ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                        >
-                            <svg className={`w-5 h-5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Expanded Filters */}
-                <div
-                    className={`grid transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'grid-rows-[1fr] opacity-100 mt-4 pt-4 border-t border-white/5' : 'grid-rows-[0fr] opacity-0'
-                        }`}
-                >
-                    <div className="min-h-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {/* Category Filter */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">カテゴリ</label>
-                                <select
-                                    value={form.category ?? ''}
-                                    onChange={(e) => handleCategoryChange(e.target.value as BookCategory || undefined)}
-                                    className="block w-full px-3 py-2 bg-slate-800 border border-white/5 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [&>option]:bg-slate-800 [&>option]:text-white"
-                                >
-                                    <option value="">全てのカテゴリ</option>
-                                    {CATEGORY_OPTIONS.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Metadata Filters */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">フィルター</label>
-                                <div className="space-y-2">
-                                    <select
-                                        value={form.author ?? ''}
-                                        onChange={(e) => handleInputChange('author', e.target.value)}
-                                        className="block w-full px-3 py-2 bg-slate-800 border border-white/5 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [&>option]:bg-slate-800 [&>option]:text-white"
-                                    >
-                                        <option value="">全ての作者</option>
-                                        {authors.map((author) => (
-                                            <option key={author} value={author}>{author}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={form.publisher ?? ''}
-                                        onChange={(e) => handleInputChange('publisher', e.target.value)}
-                                        className="block w-full px-3 py-2 bg-slate-800 border border-white/5 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500 [&>option]:bg-slate-800 [&>option]:text-white"
-                                    >
-                                        <option value="">全ての出版社</option>
-                                        {publishers.map((publisher) => (
-                                            <option key={publisher} value={publisher}>{publisher}</option>
-                                        ))}
-                                    </select>
+        <>
+            <div className="z-20 sticky top-0 px-6 py-4 backdrop-blur-sm">
+                <div className="glass-panel rounded-2xl p-4 transition-all duration-300">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-1">
+                            {/* Search Bar */}
+                            <div className="relative flex-1 max-w-xl group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg className="h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
                                 </div>
-                            </div>
-
-                            {/* Tags */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">タグ</label>
-                                <TagInput
-                                    label=""
-                                    placeholder="タグで検索..."
-                                    tags={form.tags}
-                                    onChange={(tags) => updateCriteria((prev) => ({ ...prev, tags }))}
-                                    availableTags={tags}
+                                <input
+                                    type="text"
+                                    className="block w-full pl-10 pr-3 py-2 border border-white/5 rounded-xl leading-5 bg-white/5 text-gray-200 placeholder-gray-500 focus:outline-none focus:bg-white/10 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 sm:text-sm transition-all"
+                                    placeholder="タイトルで検索..."
+                                    value={form.title ?? ''}
+                                    onChange={(e) => handleInputChange('title', e.target.value)}
                                 />
                             </div>
 
-                            {/* Logic Mode */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider">検索モード</label>
-                                <div className="space-y-2 bg-white/5 p-2 rounded-lg border border-white/5">
-                                    <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white">
-                                        <input
-                                            type="radio"
-                                            name="search-mode"
-                                            value="AND"
-                                            checked={form.mode === 'AND'}
-                                            onChange={() => handleModeChange('AND')}
-                                            className="text-blue-500 focus:ring-blue-500 bg-gray-700 border-gray-600"
-                                        />
-                                        <span>すべての条件に一致 (AND)</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer hover:text-white">
-                                        <input
-                                            type="radio"
-                                            name="search-mode"
-                                            value="OR"
-                                            checked={form.mode === 'OR'}
-                                            onChange={() => handleModeChange('OR')}
-                                            className="text-blue-500 focus:ring-blue-500 bg-gray-700 border-gray-600"
-                                        />
-                                        <span>いずれかの条件に一致 (OR)</span>
-                                    </label>
-                                </div>
+                            {/* Sort Dropdown */}
+                            <div className="relative">
+                                <select
+                                    id="sort"
+                                    value={sortOrder}
+                                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                                    className="block w-full pl-3 pr-10 py-2 text-base border-white/5 bg-slate-800 text-white focus:outline-none focus:ring-blue-500/50 focus:border-blue-500/50 sm:text-sm rounded-xl cursor-pointer hover:bg-slate-700 transition-all [&>option]:bg-slate-800 [&>option]:text-white"
+                                >
+                                    <option value="recent">最近読んだ順</option>
+                                    <option value="natural">自然順</option>
+                                    <option value="name">名前 (A-Z)</option>
+                                    <option value="date">更新日</option>
+                                    <option value="author">作者順</option>
+                                    <option value="publisher">出版社順</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Right Actions */}
+                        <div className="flex items-center gap-2">
+                            {hasFolder && onBatchFetch && (
                                 <button
                                     type="button"
-                                    onClick={handleReset}
-                                    className="text-xs text-red-400 hover:text-red-300 underline"
+                                    onClick={onBatchFetch}
+                                    disabled={loading || batchFetching}
+                                    className={`flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20 transition-all ${(loading || batchFetching) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    すべての条件をクリア
+                                    {batchFetching ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            取得中...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                            </svg>
+                                            一括取得
+                                        </>
+                                    )}
                                 </button>
-                            </div>
+                            )}
+
+                            {/* Filter Button */}
+                            <button
+                                type="button"
+                                onClick={() => setIsFilterOpen(true)}
+                                className={`relative flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${activeFilters > 0
+                                        ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/30'
+                                        : 'border-white/5 text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                </svg>
+                                <span className="text-sm font-medium">絞り込み</span>
+                                {activeFilters > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                                        {activeFilters}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* Filter Modal */}
+            <FilterModal
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                form={form}
+                onUpdate={updateCriteria}
+                onReset={handleReset}
+                authors={authors}
+                publishers={publishers}
+                tags={tags}
+            />
+        </>
     );
 };
 

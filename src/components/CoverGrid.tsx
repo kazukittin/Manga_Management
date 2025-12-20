@@ -92,17 +92,23 @@ const CoverItem = memo<{
                 </div>
                 {/* Tags */}
                 {metadata?.tags?.length ? (
-                    <div className="px-3 pb-3 flex flex-wrap gap-1">
-                        {metadata.tags.slice(0, 3).map((tag: string) => (
+                    <div className="px-3 pb-3 flex flex-wrap gap-1.5">
+                        {metadata.tags.slice(0, 3).map((tag: string, index: number) => (
                             <span
                                 key={tag}
-                                className="text-[10px] bg-blue-500/10 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/10"
+                                className={`text-[10px] px-2 py-0.5 rounded-md font-medium backdrop-blur-sm transition-all duration-200 ${
+                                    index === 0
+                                        ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-300 border border-violet-500/20'
+                                        : index === 1
+                                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/20'
+                                        : 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/20'
+                                }`}
                             >
-                                #{tag}
+                                {tag}
                             </span>
                         ))}
                         {metadata.tags.length > 3 && (
-                            <span className="text-[10px] text-slate-500 px-1">+{metadata.tags.length - 3}</span>
+                            <span className="text-[10px] text-slate-400 px-1.5 py-0.5 bg-slate-800/50 rounded-md">+{metadata.tags.length - 3}</span>
                         )}
                     </div>
                 ) : null}
