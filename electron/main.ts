@@ -33,7 +33,7 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    icon: path.join(process.env.APP_ROOT, 'ico', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
@@ -41,7 +41,10 @@ function createWindow() {
   })
 
   win.maximize()
-  win.webContents.openDevTools()
+  // Only open DevTools in development
+  if (VITE_DEV_SERVER_URL) {
+    win.webContents.openDevTools()
+  }
   Menu.setApplicationMenu(null)
 
   win.webContents.on('did-finish-load', () => {
