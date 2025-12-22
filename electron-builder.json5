@@ -12,7 +12,7 @@
     "dist-electron",
     "ico"
   ],
-  "icon": "ico/icon.png",
+  "icon": "ico/icon.ico",
   "mac": {
     "target": [
       "dmg"
@@ -20,7 +20,7 @@
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
   },
   "win": {
-    "icon": "ico/icon.png",
+    "icon": "ico/icon.ico",
     "target": [
       {
         "target": "nsis",

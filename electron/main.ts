@@ -33,7 +33,7 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.APP_ROOT, 'ico', 'icon.png'),
+    icon: path.join(process.env.APP_ROOT, 'ico', 'icon.ico'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
